@@ -4,7 +4,8 @@ project( Caffe )
 ###    Build Options     ##########################################################################
 
 option(CPU_ONLY "Build Caffe without GPU support" OFF)
-option(BUILD_PYTHON "Build Python wrapper" OFF)
+option(USE_CUDNN "Build Caffe with cuDNN support" ON)
+option(BUILD_PYTHON "Build Python wrapper" ON)
 option(BUILD_MATLAB "Build Matlab wrapper" OFF)
 option(BUILD_EXAMPLES "Build examples" ON)
 option(BUILD_SHARED_LIBS "Build SHARED libs if ON and STATIC otherwise" OFF)
@@ -21,6 +22,13 @@ endif()
 if (CMAKE_INSTALL_PREFIX_INITIALIZED_TO_DEFAULT)
     set (CMAKE_INSTALL_PREFIX "${CMAKE_BINARY_DIR}/install" CACHE PATH "Default install path" FORCE )
 endif()
+
+#### custom search paths ####
+# so it doesn't find older versions of cuda
+set(CMAKE_PREFIX_PATH /usr/local/cuda-6.5/bin ${CMAKE_PREFIX_PATH})
+# for some reason it had trouble finding this library
+set(Atlas_LAPACK_LIBRARY /usr/lib64/atlas/liblapack.so)
+
 
 ###    Configuration    ###########################################################################
 #    Compiler Flags
@@ -49,6 +57,10 @@ set( CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} ${CMAKE_SCRIPT_DIR})
 if(NOT CPU_ONLY)
     find_package(CUDA 5.5 REQUIRED)
     include_directories(${CUDA_INCLUDE_DIRS})
+    if (USE_CUDNN)
+      add_definitions(-DUSE_CUDNN)
+      set(CUDA_CUDNN_LIBRARIES ${CUDA_TOOLKIT_ROOT_DIR}/lib64/libcudnn.so)
+     endif()
 endif()
 
 ###    Subdirectories    ##########################################################################
@@ -77,7 +89,7 @@ endif()
 set(LINT_TARGET lint)
 set(LINT_SCRIPT ${CMAKE_SCRIPT_DIR}/lint.cmake)
 add_custom_target(
-    ${LINT_TARGET} 
+    ${LINT_TARGET}
     COMMAND ${CMAKE_COMMAND} -P ${LINT_SCRIPT}
 )
 
@@ -86,5 +98,3 @@ add_custom_target(
 #    Install Includes
 file(GLOB folders ${${PROJECT_NAME}_INCLUDE_DIRS}/*)
 install(DIRECTORY ${folders} DESTINATION include)
-
-
