@@ -2,14 +2,8 @@
 
 set -x
 
-# install atlas
-#sudo yum install atlas-devel
-
 # per the installation instructions
 sudo yum install atlas-devel leveldb-devel snappy-devel opencv-devel boost-devel hdf5-devel gflags-devel
-
-# google stuff
-#sudo yum install gflags-devel
 
 # glog (already compiled)
 # wget https://google-glog.googlecode.com/files/glog-0.3.3.tar.gz
