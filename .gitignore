@@ -83,6 +83,7 @@ docs/dev
 # CMake generated files
 *.gen.cmake
 
-# Emacs backup files
+# Emacs files
 \#*\#
 .\#*
+TAGS
