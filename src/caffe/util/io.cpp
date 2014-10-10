@@ -78,7 +78,11 @@ bool ReadImageToDatum(const string& filename, const int label,
     return false;
   }
   if (height > 0 && width > 0) {
-    cv::resize(cv_img_origin, cv_img, cv::Size(width, height));
+    int min_dim = std::min(cv_img_origin.cols, cv_img_origin.rows);
+    cv::Rect crop((cv_img_origin.cols/2) - (min_dim/2),
+		  (cv_img_origin.rows/2) - (min_dim/2),
+		  min_dim, min_dim);
+    cv::resize(cv_img_origin(crop), cv_img, cv::Size(width, height));
   } else {
     cv_img = cv_img_origin;
   }
