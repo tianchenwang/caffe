@@ -6,12 +6,25 @@ layers {
   type: DATA
   top: "data"
   data_param {
-    source: "random_train_lmdb"
+    source: "driving_img_train"
     backend: LMDB
     batch_size: 25
   }
   transform_param {
-    mean_file: "random_image_mean.binaryproto"
+    mean_file: "driving_img_mean.binaryproto"
+  }
+  include: { phase: TRAIN }
+}
+
+# Bounding box label and pixel label.
+layers {
+  name: "label"
+  type: DATA
+  top: "label"
+  data_param {
+    source: "driving_label_train"
+    backend: LMDB
+    batch_size: 25
   }
   include: { phase: TRAIN }
 }
@@ -21,51 +34,40 @@ layers {
   name: "data"
   type: DATA
   top: "data"
-  top: "label"
   data_param {
-    source: "random_val_lmdb"
+    source: "driving_img_test"
     backend: LMDB
     batch_size: 25
   }
   transform_param {
-    mean_file: "random_image_mean.binaryproto"
+    mean_file: "driving_img_mean.binaryproto"
   }
   include: { phase: TEST }
 }
 
-# Bounding box output.
+# Bounding box label and pixel label.
 layers {
-  name: "bb-label"
-  type: DUMMY_DATA
-  top: "bb-label"
-  dummy_data_param {
-    num: 25
-    channels: 64
-    height: 15
-    width: 20
-    data_filler {
-      type: "uniform"
-      min: 0
-      max: 640
-    }
+  name: "label"
+  type: DATA
+  top: "label"
+  data_param {
+    source: "driving_label_test"
+    backend: LMDB
+    batch_size: 25
   }
+  include: { phase: TEST }
 }
 
-# Pixel label indicating the presence of cars.
+# Splite label layer into pixel and bounding box label.
 layers {
-  name: "pixel-label"
-  type: DUMMY_DATA
+  name: "slice-label"
+  type: SLICE
+  bottom: "label"
   top: "pixel-label"
-  dummy_data_param {
-    num: 25
-    channels: 16
-    height: 15
-    width: 20
-    data_filler {
-      type: "uniform"
-      min: 0
-      max: 1
-    }
+  top: "bb-label"
+  slice_param {
+    slice_dim: 1
+    slice_point: 16
   }
 }
 
@@ -83,8 +85,6 @@ layers {
     concat_dim: 1
   }
 }
-
-
 
 layers {
   name: "conv1"
@@ -150,7 +150,7 @@ layers {
     num_output: 256
     pad: 2
     kernel_size: 5
-    group: 2
+    group: 1
     weight_filler {
       type: "gaussian"
       std: 0.01
@@ -231,7 +231,7 @@ layers {
     num_output: 384
     pad: 1
     kernel_size: 3
-    group: 2
+    group: 1
     weight_filler {
       type: "gaussian"
       std: 0.01
@@ -259,9 +259,9 @@ layers {
   weight_decay: 0
   convolution_param {
     num_output: 256
-    pad: 2
+    pad: 1
     kernel_size: 3
-    group: 2
+    group: 1
     weight_filler {
       type: "gaussian"
       std: 0.01
@@ -300,7 +300,8 @@ layers {
   weight_decay: 0
   convolution_param {
     num_output: 4096
-    kernel_size: 1
+    kernel_size: 6
+    pad: 3
     weight_filler {
       type: "gaussian"
       std: 0.005
@@ -369,7 +370,7 @@ layers {
   type: CONVOLUTION
   bottom: "fc7-conv"
   top: "bb-output"
-  blobs_lr: 1
+  blobs_lr: 0.001
   blobs_lr: 2
   weight_decay: 1
   weight_decay: 0
@@ -378,11 +379,11 @@ layers {
     kernel_size: 1
     weight_filler {
       type: "gaussian"
-      std: 0.01
+      std: 0.005
     }
     bias_filler {
       type: "constant"
-      value: 0
+      value: 1.0
     }
   }
 }
@@ -401,28 +402,28 @@ layers {
     kernel_size: 1
     weight_filler {
       type: "gaussian"
-      std: 0.01
+      std: 0.005
     }
     bias_filler {
       type: "constant"
-      value: 0
+      value: 1.0
     }
   }
 }
 
 # Pixel level logistic prediction.
-layers {
-  name: "pixel-prob"
-  type: SIGMOID
-  bottom: "pixel-conv"
-  top: "pixel-prob"
-}
+#layers {
+#  name: "pixel-prob"
+#  type: SIGMOID
+#  bottom: "pixel-conv"
+#  top: "pixel-prob"
+#}
 
 # Pixel level logistic loss.
 layers {
   name: "pixel-loss"
   type: SIGMOID_CROSS_ENTROPY_LOSS
-  bottom: "pixel-prob"
+  bottom: "pixel-conv"
   bottom: "pixel-label"
   top: "pixel-loss"
 }
@@ -433,7 +434,7 @@ layers {
   type: ELTWISE
   bottom: "pixel-block"
   bottom: "bb-output"
-  top: "bb-final-output"
+  top: "bb-masked-output"
   eltwise_param {
     operation: PROD
   }
@@ -443,7 +444,7 @@ layers {
 layers {
   name: "bb-loss"
   type: EUCLIDEAN_LOSS
-  bottom: "bb-final-output"
+  bottom: "bb-masked-output"
   bottom: "bb-label"
   top: "bb-loss"
 }
