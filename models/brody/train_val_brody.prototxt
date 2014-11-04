@@ -8,7 +8,7 @@ layers {
   data_param {
     source: "driving_img_train"
     backend: LMDB
-    batch_size: 25
+    batch_size: 5
   }
   transform_param {
     mean_file: "driving_img_mean.binaryproto"
@@ -24,7 +24,7 @@ layers {
   data_param {
     source: "driving_label_train"
     backend: LMDB
-    batch_size: 25
+    batch_size: 5
   }
   include: { phase: TRAIN }
 }
@@ -37,7 +37,7 @@ layers {
   data_param {
     source: "driving_img_test"
     backend: LMDB
-    batch_size: 25
+    batch_size: 5
   }
   transform_param {
     mean_file: "driving_img_mean.binaryproto"
@@ -53,7 +53,7 @@ layers {
   data_param {
     source: "driving_label_test"
     backend: LMDB
-    batch_size: 25
+    batch_size: 5
   }
   include: { phase: TEST }
 }
