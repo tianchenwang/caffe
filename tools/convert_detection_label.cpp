@@ -52,7 +52,8 @@ DEFINE_int32(resize_width, 640, "Width images are resized to");
 DEFINE_int32(resize_height, 480, "Height images are resized to");
 DEFINE_double(scaling, 1.0 / 8.0, "Amount of downscaling applied up to the dense layers.");
 
-bool ReadBoundingBoxLabelToDatum(const vector<int>& bbs, const int width, const int height,
+bool ReadBoundingBoxLabelToDatum(
+    const vector<int>& bbs, const int width, const int height,
     const int grid_dim, const float scaling, Datum* datum) {
   const int img_width = width * grid_dim;
   const int img_height = height * grid_dim;
@@ -118,6 +119,8 @@ bool ReadBoundingBoxLabelToDatum(const vector<int>& bbs, const int width, const 
             float val = labels[m]->at<float>(y + dy, x + dx);
             if (m == 0) {
               // do nothing
+            } else if (labels[0]->at<float>(y + dy, x + dx) == 0.0) {
+              // do nothing
             } else if (m % 2 == 1) {
               // x coordinate
               adjustment = (x + grid_dim / 2) / scaling;
@@ -126,6 +129,8 @@ bool ReadBoundingBoxLabelToDatum(const vector<int>& bbs, const int width, const 
               adjustment = (y + grid_dim / 2) / scaling;
             }
             datum->add_float_data(val - adjustment);
+            //std::cout << val << "," << adjustment << "," << val - adjustment << " ";
+            //std::cout << val - adjustment << " ";
           }
         }
       }
