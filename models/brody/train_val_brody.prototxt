@@ -448,3 +448,32 @@ layers {
   bottom: "bb-label"
   top: "bb-loss"
 }
+
+# L1 error loss
+#layers {
+#  name: "bb-diff"
+#  type: ELTWISE
+#  bottom: "bb-label"
+#  bottom: "bb-masked-output"
+#  eltwise_param {
+#    operation: SUM
+#    coeff: 1.0
+#    coeff: -1.0
+#  }
+#  top: "bb-diff"
+#}
+
+#layers {
+#  name: "bb-loss"
+#  type: ABSVAL
+#  bottom: "bb-diff"
+#  top: "bb-loss"
+#  # 1 / (batch_size * 20 * 15 * 64)
+#  loss_weight: 0.00001041666666666
+#}
+
+#layers {
+#  name: "bb-loss-silence"
+#  type: SILENCE
+#  bottom: "bb-loss"
+#}
