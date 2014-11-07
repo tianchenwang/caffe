@@ -73,7 +73,7 @@ bool ReadBoundingBoxLabelToDatum(
     float ymax = bbs[i + 3];
     float w = xmax - xmin;
     float h = ymax - ymin;
-
+    // shrink bboxes
     int gxmin = cvRound((xmin + w / 4) * scaling);
     int gxmax = cvRound((xmax - w / 4) * scaling);
     int gymin = cvRound((ymin + h / 4) * scaling);

@@ -11,6 +11,16 @@
 #include "caffe/util/math_functions.hpp"
 #include "caffe/util/upgrade_proto.hpp"
 
+
+#include <opencv2/core/core.hpp>
+#include <opencv2/highgui/highgui.hpp>
+#include <opencv2/highgui/highgui_c.h>
+#include <opencv2/imgproc/imgproc.hpp>
+#include <iostream>     // std::cout, std::ios
+#include <sstream>
+
+
+
 namespace caffe {
 
 template <typename Dtype>
@@ -190,6 +200,61 @@ void Solver<Dtype>::Solve(const char* resume_file) {
     if (display) {
       LOG(INFO) << "Iteration " << iter_ << ", loss = " << loss;
       const vector<Blob<Dtype>*>& result = net_->output_blobs();
+      //added by Tao. for debugging purpose only
+      const vector<string>& blob_names = net_->blob_names();
+      const vector<shared_ptr<Blob<Dtype> > >& blobs = net_->blobs();
+      string str1("data");
+      string str2("label");
+      string str3("pixel-label");
+      string str4("bb-label");
+      for (int j = 0; j < blobs.size(); ++j) {
+        if(blob_names[j].compare(str1)==0)
+        {
+          LOG(INFO) << "data " << blobs[j]->num()<<" "<<blobs[j]->channels()<<" "<<blobs[j]->height()<<" "<<blobs[j]->width();
+          for(int n=0; n<blobs[j]->num(); ++n)
+          {
+            int image_id = this->iter_*5+n;
+            const Dtype* foo;
+            foo = blobs[j]->cpu_data()+n*blobs[j]->channels()*blobs[j]->height()*blobs[j]->width();
+            cv::Mat curr_img = cv::Mat(blobs[j]->height(), blobs[j]->width(), CV_32FC3, cv::Scalar(0,0,255));
+            double minVal, maxVal;
+            cv::minMaxLoc(curr_img, &minVal, &maxVal); //find minimum and maximum intensities
+            //std::copy ( foo, foo+blobs[j]->channels()*blobs[j]->height()*blobs[j]->width(), curr_img.data );
+            for(int kk=0; kk<blobs[j]->channels();++kk)
+            {
+              for(int yy=0; yy<blobs[j]->height();++yy)
+              {
+                for(int xx=0; xx<blobs[j]->width();++xx)
+                {
+                  //std::cout<<*(foo+(((n*blobs[j]->channels() + kk) * blobs[j]->height() + yy) * blobs[j]->width() + xx))<<" ";
+                  //*(curr_img.data+((yy * blobs[j]->width() + xx) * 3 + kk))=*(foo+(((n*blobs[j]->channels() + kk) * blobs[j]->height() + yy) * blobs[j]->width() + xx));
+                  curr_img.at<cv::Vec3f>(yy,xx)[kk]=*(foo+(((n*blobs[j]->channels() + kk) * blobs[j]->height() + yy) * blobs[j]->width() + xx));
+                }
+              }
+            }
+            //std::cout<<std::endl;
+            cv::Mat save_img;
+            //curr_img.convertTo(save_img, CV_8UC3);
+            std::ostringstream stringStream;
+            stringStream << "img"<<image_id<<".png";
+            std::string save_name = stringStream.str();
+            cv::imwrite(save_name, curr_img);
+          }
+        }
+        /*if(blob_names[j].compare(str2)==0)
+        {
+          LOG(INFO) << "label " << blobs[j]->num()<<" "<<blobs[j]->channels()<<" "<<blobs[j]->height()<<" "<<blobs[j]->width();
+        }
+        if(blob_names[j].compare(str3)==0)
+        {
+          LOG(INFO) << "pixel-label " << blobs[j]->num()<<" "<<blobs[j]->channels()<<" "<<blobs[j]->height()<<" "<<blobs[j]->width();
+        }
+        if(blob_names[j].compare(str4)==0)
+        {
+          LOG(INFO) << "bb-label " << blobs[j]->num()<<" "<<blobs[j]->channels()<<" "<<blobs[j]->height()<<" "<<blobs[j]->width();
+        }*/
+      }
+      //end
       int score_index = 0;
       for (int j = 0; j < result.size(); ++j) {
         const Dtype* result_vec = result[j]->cpu_data();
