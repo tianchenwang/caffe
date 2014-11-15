@@ -207,52 +207,89 @@ void Solver<Dtype>::Solve(const char* resume_file) {
       string str2("label");
       string str3("pixel-label");
       string str4("bb-label");
+      string save_dir("/scr/twangcat/caffenet_results/train/");
+      vector<cv::Mat> save_imgs;
+      int quad_height;
+      int quad_width;
+      int batch_size;
+      const Dtype* pix_start;
+      const Dtype* bb_start;
       for (int j = 0; j < blobs.size(); ++j) {
-        if(blob_names[j].compare(str1)==0)
+        if(blob_names[j].compare(str3)==0) //pixel label
+        {
+          LOG(INFO) << "pixel-label " << blobs[j]->num()<<" "<<blobs[j]->channels()<<" "<<blobs[j]->height()<<" "<<blobs[j]->width();
+          pix_start = blobs[j]->cpu_data();
+          quad_height = blobs[j]->height();
+          quad_width = blobs[j]->width();
+          batch_size = blobs[j]->num();
+        }
+        if(blob_names[j].compare(str4)==0) // bb label
+        {
+          LOG(INFO) << "bb-label " << blobs[j]->num()<<" "<<blobs[j]->channels()<<" "<<blobs[j]->height()<<" "<<blobs[j]->width();
+          bb_start = blobs[j]->cpu_data();
+        }
+        if(blob_names[j].compare(str1)==0) // actual image
         {
           LOG(INFO) << "data " << blobs[j]->num()<<" "<<blobs[j]->channels()<<" "<<blobs[j]->height()<<" "<<blobs[j]->width();
+          const Dtype* data_start = blobs[j]->cpu_data();
           for(int n=0; n<blobs[j]->num(); ++n)
           {
-            int image_id = this->iter_*5+n;
-            const Dtype* foo;
-            foo = blobs[j]->cpu_data()+n*blobs[j]->channels()*blobs[j]->height()*blobs[j]->width();
             cv::Mat curr_img = cv::Mat(blobs[j]->height(), blobs[j]->width(), CV_32FC3, cv::Scalar(0,0,255));
-            double minVal, maxVal;
-            cv::minMaxLoc(curr_img, &minVal, &maxVal); //find minimum and maximum intensities
-            //std::copy ( foo, foo+blobs[j]->channels()*blobs[j]->height()*blobs[j]->width(), curr_img.data );
             for(int kk=0; kk<blobs[j]->channels();++kk)
             {
               for(int yy=0; yy<blobs[j]->height();++yy)
               {
                 for(int xx=0; xx<blobs[j]->width();++xx)
                 {
-                  //std::cout<<*(foo+(((n*blobs[j]->channels() + kk) * blobs[j]->height() + yy) * blobs[j]->width() + xx))<<" ";
-                  //*(curr_img.data+((yy * blobs[j]->width() + xx) * 3 + kk))=*(foo+(((n*blobs[j]->channels() + kk) * blobs[j]->height() + yy) * blobs[j]->width() + xx));
-                  curr_img.at<cv::Vec3f>(yy,xx)[kk]=*(foo+(((n*blobs[j]->channels() + kk) * blobs[j]->height() + yy) * blobs[j]->width() + xx));
+                  curr_img.at<cv::Vec3f>(yy,xx)[kk]=*(data_start+(((n*blobs[j]->channels() + kk) * blobs[j]->height() + yy) * blobs[j]->width() + xx));
                 }
               }
             }
-            //std::cout<<std::endl;
-            cv::Mat save_img;
-            //curr_img.convertTo(save_img, CV_8UC3);
-            std::ostringstream stringStream;
-            stringStream << "img"<<image_id<<".png";
-            std::string save_name = stringStream.str();
-            cv::imwrite(save_name, curr_img);
+            save_imgs.push_back(curr_img); 
           }
         }
-        /*if(blob_names[j].compare(str2)==0)
-        {
-          LOG(INFO) << "label " << blobs[j]->num()<<" "<<blobs[j]->channels()<<" "<<blobs[j]->height()<<" "<<blobs[j]->width();
+      }
+      int grid_dim=4;
+      int label_count = 0;
+      int label_height = quad_height*grid_dim;
+      int label_width = quad_width*grid_dim;
+      Dtype scaling = 1.0/8;
+      for(int n=0; n<batch_size; ++n){
+        int image_id = this->iter_*5+n;
+        cv::Mat save_img = save_imgs[n];
+        std::ostringstream stringStream;
+        stringStream <<save_dir<< "img"<<image_id<<".png";
+        std::string save_name = stringStream.str();
+        for (int z=0; z<16;++z){
+          for (int qy = 0; qy < quad_height; ++qy) {
+            for (int qx = 0; qx < quad_width; ++qx) {
+              int dx = z%grid_dim;
+              int dy = z/grid_dim;
+              int x = qx*grid_dim+dx;
+              int y = qy*grid_dim+dy;
+              if (*(pix_start+(((n*16+z)*quad_height+qy)*quad_width+qx)) <0.5) {
+                // do nothing
+              } else{
+
+                save_img.at<cv::Vec3f>(y/scaling,x/scaling) = cv::Vec3f(0,255,0);
+                save_img.at<cv::Vec3f>(y/scaling-1,x/scaling-1) = cv::Vec3f(0,255,0);
+                save_img.at<cv::Vec3f>(y/scaling+1,x/scaling-1) = cv::Vec3f(0,255,0);
+                save_img.at<cv::Vec3f>(y/scaling-1,x/scaling+1) = cv::Vec3f(0,255,0);
+                save_img.at<cv::Vec3f>(y/scaling+1,x/scaling+1) = cv::Vec3f(0,255,0);
+
+                float x_adj = (qx*grid_dim + grid_dim / 2) / scaling;
+                float y_adj = (qy*grid_dim + grid_dim / 2) / scaling;
+                int x_min = *(bb_start+(((n*64+z)*quad_height+qy)*quad_width+qx))+x_adj;
+                int y_min = *(bb_start+(((n*64+z+16)*quad_height+qy)*quad_width+qx))+y_adj;
+                int x_max = *(bb_start+(((n*64+z+32)*quad_height+qy)*quad_width+qx))+x_adj;
+                int y_max = *(bb_start+(((n*64+z+48)*quad_height+qy)*quad_width+qx))+y_adj;
+                cv::Rect bb(x_min, y_min, x_max-x_min+1, y_max-y_min+1); 
+                cv::rectangle(save_img, bb, cv::Scalar(100, 100, 200), 2);
+              }
+            }
+          }
+          cv::imwrite(save_name, save_img);
         }
-        if(blob_names[j].compare(str3)==0)
-        {
-          LOG(INFO) << "pixel-label " << blobs[j]->num()<<" "<<blobs[j]->channels()<<" "<<blobs[j]->height()<<" "<<blobs[j]->width();
-        }
-        if(blob_names[j].compare(str4)==0)
-        {
-          LOG(INFO) << "bb-label " << blobs[j]->num()<<" "<<blobs[j]->channels()<<" "<<blobs[j]->height()<<" "<<blobs[j]->width();
-        }*/
       }
       //end
       int score_index = 0;
@@ -321,6 +358,7 @@ void Solver<Dtype>::Test(const int test_net_id) {
   const shared_ptr<Net<Dtype> >& test_net = test_nets_[test_net_id];
   Dtype loss = 0;
   for (int i = 0; i < param_.test_iter(test_net_id); ++i) {
+    LOG(INFO) << "i = " << i<<" of "<<param_.test_iter(test_net_id);
     Dtype iter_loss;
     const vector<Blob<Dtype>*>& result =
         test_net->Forward(bottom_vec, &iter_loss);
@@ -350,6 +388,7 @@ void Solver<Dtype>::Test(const int test_net_id) {
     LOG(INFO) << "Test loss: " << loss;
   }
   for (int i = 0; i < test_score.size(); ++i) {
+    LOG(INFO) << "i2 = " << i<<" of "<<test_score.size();
     const int output_blob_index =
         test_net->output_blob_indices()[test_score_output_id[i]];
     const string& output_name = test_net->blob_names()[output_blob_index];

@@ -4,7 +4,6 @@
 #include <string>
 #include <utility>
 #include <vector>
-
 #include "boost/scoped_ptr.hpp"
 #include "hdf5.h"
 #include "leveldb/db.h"
@@ -17,6 +16,10 @@
 #include "caffe/internal_thread.hpp"
 #include "caffe/layer.hpp"
 #include "caffe/proto/caffe.pb.h"
+#include <opencv2/core/core.hpp>
+#include <opencv2/highgui/highgui.hpp>
+#include <opencv2/highgui/highgui_c.h>
+#include <opencv2/imgproc/imgproc.hpp>
 
 namespace caffe {
 
@@ -270,6 +273,44 @@ class ImageDataLayer : public BasePrefetchingDataLayer<Dtype> {
 
   vector<std::pair<std::string, int> > lines_;
   int lines_id_;
+};
+
+
+/**
+ * @brief Provides data to the Net from video files.
+ *
+ * TODO(dox): thorough documentation for Forward and proto params.
+ */
+template <typename Dtype>
+class VideoDataLayer : public BasePrefetchingDataLayer<Dtype> {
+ public:
+  explicit VideoDataLayer(const LayerParameter& param)
+      : BasePrefetchingDataLayer<Dtype>(param) {}
+  virtual ~VideoDataLayer();
+  virtual void DataLayerSetUp(const vector<Blob<Dtype>*>& bottom,
+      vector<Blob<Dtype>*>* top);
+
+  virtual inline LayerParameter_LayerType type() const {
+    return LayerParameter_LayerType_VIDEO_DATA;
+  }
+  virtual inline int ExactNumBottomBlobs() const { return 0; }
+  virtual inline int ExactNumTopBlobs() const { return 1; }
+
+ protected:
+  shared_ptr<Caffe::RNG> prefetch_rng_;
+  virtual void ShuffleBatches();
+  virtual void InternalThreadEntry();
+  bool ReadVideoFrameToDatum(const string& filename, size_t id,
+    size_t persp, const int height, const int width, Datum* datum);
+
+//inline bool ReadVideoBatchToDatum(const string& filename, std::vector<size_t> frameIds,
+//    std::vector<size_t>trans, Datum* datum) {
+ // return ReadVideoBatchToDatum(filename, frameIds, trans, 0, 0, datum);
+//}
+
+  vector<std::pair<std::string, std::pair<std::vector<size_t>, std::vector<size_t> > > > lines_;
+  int lines_id_;
+  cv::VideoCapture* cap;
 };
 
 /**

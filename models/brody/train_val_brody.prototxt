@@ -3,12 +3,11 @@ name: "BrodyNet"
 # Training input.
 layers {
   name: "data"
-  type: DATA
+  type: VIDEO_DATA
   top: "data"
-  data_param {
-    source: "/deep/group/driving_data/twangcat/lmdb/driving_img_train"
-    backend: LMDB
-    batch_size: 5
+  video_data_param {
+    source: "/scail/group/deeplearning/driving_data/twangcat/schedules/q50_multilane_planar_train_schedule1_batch20_2cam.txt"
+    batch_size: 20
   }
   transform_param {
     mean_file: "driving_img_mean.binaryproto"
@@ -24,7 +23,7 @@ layers {
   data_param {
     source: "/deep/group/driving_data/twangcat/lmdb/driving_label_train"
     backend: LMDB
-    batch_size: 5
+    batch_size: 20
   }
   include: { phase: TRAIN }
 }
@@ -37,7 +36,7 @@ layers {
   data_param {
     source: "/deep/group/driving_data/twangcat/lmdb/driving_img_test"
     backend: LMDB
-    batch_size: 5
+    batch_size: 20
   }
   transform_param {
     mean_file: "driving_img_mean.binaryproto"
@@ -53,7 +52,7 @@ layers {
   data_param {
     source: "/deep/group/driving_data/twangcat/lmdb/driving_label_test"
     backend: LMDB
-    batch_size: 5
+    batch_size: 20
   }
   include: { phase: TEST }
 }
