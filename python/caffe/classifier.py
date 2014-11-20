@@ -92,3 +92,22 @@ class Classifier(caffe.Net):
             predictions = predictions.mean(1)
 
         return predictions
+
+
+    def ff(self, inputs):
+        # Scale to standardize input dimensions.
+        input_ = np.zeros((len(inputs),
+            self.image_dims[0], self.image_dims[1], inputs[0].shape[2]),
+            dtype=np.float32)
+        for ix, in_ in enumerate(inputs):
+            input_[ix] = caffe.io.resize_image(in_, self.image_dims)
+
+        # Generate center, corner, and mirrored crops.
+        input_ = caffe.io.oversample(input_, self.crop_dims)
+
+        # Classify
+        caffe_in = np.zeros(np.array(input_.shape)[[0,3,1,2]],
+                            dtype=np.float32)
+        for ix, in_ in enumerate(input_):
+            caffe_in[ix] = self.preprocess(self.inputs[0], in_)
+        out = self.forward_all(**{self.inputs[0]: caffe_in})
