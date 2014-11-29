@@ -189,10 +189,10 @@ void Solver<Dtype>::Solve(const char* resume_file) {
       Snapshot();
     }
 
-    if (param_.test_interval() && iter_ % param_.test_interval() == 0
-        && (iter_ > 0 || param_.test_initialization())) {
-      TestAll();
-    }
+    //if (param_.test_interval() && iter_ % param_.test_interval() == 0
+    //    && (iter_ > 0 || param_.test_initialization())) {
+    //  TestAll();
+    //}
 
     const bool display = param_.display() && iter_ % param_.display() == 0;
     net_->set_debug_info(display && param_.debug_info());
@@ -279,12 +279,19 @@ void Solver<Dtype>::Solve(const char* resume_file) {
 
                 float x_adj = (qx*grid_dim + grid_dim / 2) / scaling;
                 float y_adj = (qy*grid_dim + grid_dim / 2) / scaling;
+                //std::cout<<*(bb_start+(((n*64+z)*quad_height+qy)*quad_width+qx))<<" ";
+                //std::cout<<*(bb_start+(((n*64+z+16)*quad_height+qy)*quad_width+qx))<<" ";
+                //std::cout<<*(bb_start+(((n*64+z+32)*quad_height+qy)*quad_width+qx))<<" ";
+                //std::cout<<*(bb_start+(((n*64+z+48)*quad_height+qy)*quad_width+qx))<<std::endl;
                 int x_min = *(bb_start+(((n*64+z)*quad_height+qy)*quad_width+qx))+x_adj;
                 int y_min = *(bb_start+(((n*64+z+16)*quad_height+qy)*quad_width+qx))+y_adj;
                 int x_max = *(bb_start+(((n*64+z+32)*quad_height+qy)*quad_width+qx))+x_adj;
                 int y_max = *(bb_start+(((n*64+z+48)*quad_height+qy)*quad_width+qx))+y_adj;
-                cv::Rect bb(x_min, y_min, x_max-x_min+1, y_max-y_min+1); 
-                cv::rectangle(save_img, bb, cv::Scalar(100, 100, 200), 2);
+                //cv::Rect bb(x_min, y_min, x_max-x_min+1, y_max-y_min+1); 
+                //cv::rectangle(save_img, bb, cv::Scalar(100, 100, 200), 2);
+                cv::Point p1(x_min, y_min);
+                cv::Point p2(x_max, y_max);
+                cv::line(save_img,p1,p2,cv::Scalar(100, 100, 200), 2);
               }
             }
           }
@@ -329,9 +336,9 @@ void Solver<Dtype>::Solve(const char* resume_file) {
     net_->Forward(bottom_vec, &loss);
     LOG(INFO) << "Iteration " << iter_ << ", loss = " << loss;
   }
-  if (param_.test_interval() && iter_ % param_.test_interval() == 0) {
-    TestAll();
-  }
+  //if (param_.test_interval() && iter_ % param_.test_interval() == 0) {
+  //  TestAll();
+  //}
   LOG(INFO) << "Optimization Done.";
 }
 

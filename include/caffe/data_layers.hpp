@@ -20,7 +20,6 @@
 #include <opencv2/highgui/highgui.hpp>
 #include <opencv2/highgui/highgui_c.h>
 #include <opencv2/imgproc/imgproc.hpp>
-
 namespace caffe {
 
 #define HDF5_DATA_DATASET_NAME "data"
@@ -302,7 +301,7 @@ class VideoDataLayer : public BasePrefetchingDataLayer<Dtype> {
   virtual void InternalThreadEntry();
   bool ReadVideoFrameToDatum(const string& filename, size_t id,
     size_t persp, const int height, const int width, Datum* datum);
-
+  void setPerspective();
 //inline bool ReadVideoBatchToDatum(const string& filename, std::vector<size_t> frameIds,
 //    std::vector<size_t>trans, Datum* datum) {
  // return ReadVideoBatchToDatum(filename, frameIds, trans, 0, 0, datum);
@@ -310,7 +309,39 @@ class VideoDataLayer : public BasePrefetchingDataLayer<Dtype> {
 
   vector<std::pair<std::string, std::pair<std::vector<size_t>, std::vector<size_t> > > > lines_;
   int lines_id_;
+  std::vector<cv::Mat> mTransforms;
   cv::VideoCapture* cap;
+};
+
+
+/**
+ * @brief Provides multilane labels to the Net.
+ *
+ * TODO(dox): thorough documentation for Forward and proto params.
+ */
+template <typename Dtype>
+class MultilaneLabelLayer : public BasePrefetchingDataLayer<Dtype> {
+ public:
+  explicit MultilaneLabelLayer(const LayerParameter& param)
+      : BasePrefetchingDataLayer<Dtype>(param) {}
+  virtual ~MultilaneLabelLayer();
+  virtual void DataLayerSetUp(const vector<Blob<Dtype>*>& bottom,
+      vector<Blob<Dtype>*>* top);
+
+  virtual inline LayerParameter_LayerType type() const {
+    return LayerParameter_LayerType_VIDEO_DATA;
+  }
+  virtual inline int ExactNumBottomBlobs() const { return 0; }
+  virtual inline int ExactNumTopBlobs() const { return 1; }
+
+ protected:
+  shared_ptr<Caffe::RNG> prefetch_rng_;
+  virtual void ShuffleBatches();
+  virtual void InternalThreadEntry();
+  //boost::numpy::ndarray ReadLabelBatch(const string& filename, std::vector<size_t> &frame_ids, std::vector<size_t> trans, const int height, const int width);
+
+  vector<std::pair<std::string, std::pair<std::vector<int>, std::vector<int> > > > lines_;
+  int lines_id_;
 };
 
 /**

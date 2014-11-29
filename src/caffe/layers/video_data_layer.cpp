@@ -10,6 +10,10 @@
 #include "caffe/util/math_functions.hpp"
 #include "caffe/util/rng.hpp"
 #include <boost/algorithm/string.hpp>
+#include <boost/python.hpp>
+#include <boost/numpy.hpp>
+namespace py = boost::python; // create namespace variable for boost::python  
+namespace np = boost::numpy; // create namespace variable for boost::python  
 namespace caffe {
 
 template <typename Dtype>
@@ -41,8 +45,8 @@ bool VideoDataLayer<Dtype>:: ReadVideoFrameToDatum(const string& filename, size_
     cv_img = cv_img_origin;
   }
   // apply perspective transform
-  //cv::Mat warpMatrix = mTransforms[persp+(cam_num-1)*numPersp];
-  //cv::warpPerspective(cv_img, cv_img, warpMatrix, frame.size(), cv::INTER_LINEAR, cv::BORDER_REPLICATE);
+  cv::Mat warpMatrix = this->mTransforms[persp];
+  cv::warpPerspective(cv_img, cv_img, warpMatrix, cv_img.size(), cv::INTER_LINEAR, cv::BORDER_REPLICATE);
   // copy data to datum  
   int num_channels = 3;
   datum->set_channels(num_channels);
@@ -63,6 +67,59 @@ bool VideoDataLayer<Dtype>:: ReadVideoFrameToDatum(const string& filename, size_
   return true;
 }
 
+
+template <typename Dtype>
+void VideoDataLayer<Dtype>::setPerspective() {
+
+  /*try{
+    Py_Initialize();
+    PyRun_SimpleString("import sys");
+    PyRun_SimpleString("sys.path.append(\"/afs/cs.stanford.edu/u/twangcat/scratch/caffenet/src/caffe/py_lane_label_reader/\")");
+    np::initialize();
+  }catch(py::error_already_set const &){
+    PyErr_Print();
+    LOG(FATAL) <<"boost python and numpy initialization failed.";
+  }
+  py::object list;
+  try{
+  // initialize python helper class
+       py::object module = py::import("perspective_reader");
+       py::object readerClass = module.attr("PerspectiveReader");
+       py::object reader = readerClass();
+       list = reader.attr("read")();
+     }catch(py::error_already_set const &){                                                                          
+    PyErr_Print();                                                                                                
+    LOG(FATAL) <<"numpy perspective reading function failed!";                                                          
+  }  
+  int num_persps = py::len(list);
+  for(int i=0;i<num_persps;++i)
+  {
+    //py::object arr_handle = list[i];
+    //np::ndarray pArray = np::from_object(arr_handle);
+    
+    //float* persp_data = (float*)(pArray.get_data());
+    this->mTransforms.push_back(cv::Mat::eye(3, 3, CV_32F, persp_data));
+  }
+*/
+  float persp_data[] = {2.00000000e+00,   4.85722573e-16,  -1.98951966e-13, 1.55172414e-01,   2.20689655e+00,  -9.93103448e+01, 2.35813973e-18,   1.46367293e-18,   2.00000000e+00};
+  // essential to do a clone here otherwise data is not copied properly. not sure why
+  this->mTransforms.push_back(cv::Mat(3, 3, CV_32F, persp_data).clone());
+  persp_data = {2.00000000e+00,  -2.60991180e-16,  -1.35814320e-13, -1.55172414e-01,   2.20689655e+00,  -7.89095352e-14, -1.39242621e-19,  -7.96792478e-19,   2.00000000e+00};
+  this->mTransforms.push_back(cv::Mat(3, 3, CV_32F, persp_data).clone());
+  persp_data = {2.22608696e+00,   3.01449275e-01,  -1.44695652e+02, -1.74860126e-15,   2.00000000e+00,  -9.94759830e-14, 2.00577402e-18,  -4.60785923e-18,   2.00000000e+00};
+  this->mTransforms.push_back(cv::Mat(3, 3, CV_32F, persp_data).clone());
+  persp_data = {2.22608696e+00,  -2.08695652e-01,  -4.81606942e-14, -1.21601236e-15,   2.06956522e+00,  -2.68140544e-14, 1.30767163e-18,   1.44927536e-04,   2.00000000e+00};
+  this->mTransforms.push_back(cv::Mat(3, 3, CV_32F, persp_data).clone());
+  persp_data = {1.76207983e+00,   2.42673669e-16,  -1.35389096e-13, -1.65464295e-01,   2.18780567e+00,  -8.38443898e-14, -6.37686030e-04,   3.91261819e-04,   2.00000000e+00};
+  this->mTransforms.push_back(cv::Mat(3, 3, CV_32F, persp_data).clone());
+  persp_data = {2.15126050e+00,  -2.48222366e-01,   1.11700065e+01, -7.49400542e-16,   2.46153846e+00,  -1.10769231e+02, 2.33103467e-18,   8.13151629e-19,   2.00000000e+00};
+  this->mTransforms.push_back(cv::Mat(3, 3, CV_32F, persp_data).clone());
+  persp_data = {1.,  0.,  0., 0.,  1.,  0., 0.,  0.,  1.};
+  this->mTransforms.push_back(cv::Mat(3, 3, CV_32F, persp_data).clone());
+}
+
+
+
 template <typename Dtype>
 void VideoDataLayer<Dtype>::DataLayerSetUp(const vector<Blob<Dtype>*>& bottom,
       vector<Blob<Dtype>*>* top) {
@@ -73,11 +130,12 @@ void VideoDataLayer<Dtype>::DataLayerSetUp(const vector<Blob<Dtype>*>& bottom,
       "new_height and new_width to be set at the same time.";
   // Read the file with filenames and labels
   const string& source = this->layer_param_.video_data_param().source();
+  setPerspective();
+
+
   LOG(INFO) << "Opening schedule file " << source;
   std::ifstream infile(source.c_str());
-  
   string batch_string;
-  
   string filename;
   //while (infile >> batch_string) {
   while (getline (infile, batch_string)) {
@@ -212,7 +270,6 @@ void VideoDataLayer<Dtype>::InternalThreadEntry() {
 
     // Apply transformations (mirror, crop...) to the data
     this->data_transformer_.Transform(item_id, datum, this->mean_, top_data);
-
     // go to the next iter
     lines_id_++;
     if (lines_id_ >= lines_size) {

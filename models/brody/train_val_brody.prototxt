@@ -18,11 +18,10 @@ layers {
 # Bounding box label and pixel label.
 layers {
   name: "label"
-  type: DATA
+  type: MULTILANE_LABEL
   top: "label"
-  data_param {
-    source: "/deep/group/driving_data/twangcat/lmdb/driving_label_train"
-    backend: LMDB
+  multilane_label_param {
+    source: "/scail/group/deeplearning/driving_data/twangcat/schedules/q50_multilane_planar_train_schedule1_batch20_2cam.txt"
     batch_size: 20
   }
   include: { phase: TRAIN }

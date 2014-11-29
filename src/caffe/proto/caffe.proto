@@ -219,7 +219,7 @@ message LayerParameter {
   // line above the enum. Update the next available ID when you add a new
   // LayerType.
   //
-  // LayerType next available ID: 39 (last added: VIDEO_DATA)
+  // LayerType next available ID: 40 (last added: MULTILANE_LABEL)
   enum LayerType {
     // "NONE" layer type is 0th enum element so that we don't cause confusion
     // by defaulting to an existent LayerType (instead, should usually error if
@@ -247,6 +247,7 @@ message LayerParameter {
     INNER_PRODUCT = 14;
     LRN = 15;
     MEMORY_DATA = 29;
+    MULTILANE_LABEL = 39;
     MULTINOMIAL_LOGISTIC_LOSS = 16;
     MVN = 34;
     POOLING = 17;
@@ -308,6 +309,7 @@ message LayerParameter {
   optional InnerProductParameter inner_product_param = 17;
   optional LRNParameter lrn_param = 18;
   optional MemoryDataParameter memory_data_param = 22;
+  optional MultilaneLabelParameter multilane_label_param = 42;
   optional MVNParameter mvn_param = 34;
   optional PoolingParameter pooling_param = 19;
   optional PowerParameter power_param = 21;
@@ -526,6 +528,35 @@ message ImageDataParameter {
   optional bool mirror = 6 [default = false];
 }
 
+// Message that stores parameters used by MultilaneLabelLayer
+message MultilaneLabelParameter {
+  // Specify the data source.
+  optional string source = 1;
+  // Specify the batch size.
+  optional uint32 batch_size = 4;
+  // The rand_skip variable is for the data layer to skip a few data points
+  // to avoid all asynchronous sgd clients to start at the same point. The skip
+  // point would be set as rand_skip * rand(0,1). Note that rand_skip should not
+  // be larger than the number of keys in the leveldb.
+  optional uint32 rand_skip = 7 [default = 0];
+  // Whether or not MultilaneLabelLayer should shuffle the list of files at every epoch.
+  optional bool shuffle = 8 [default = false];
+  // It will also resize images if new_height or new_width are not zero.
+  optional uint32 new_height = 9 [default = 0];
+  optional uint32 new_width = 10 [default = 0];
+  // DEPRECATED. See TransformationParameter. For data pre-processing, we can do
+  // simple scaling and subtracting the data mean, if provided. Note that the
+  // mean subtraction is always carried out before scaling.
+  optional float scale = 2 [default = 1];
+  optional string mean_file = 3;
+  // DEPRECATED. See TransformationParameter. Specify if we would like to randomly
+  // crop an image.
+  optional uint32 crop_size = 5 [default = 0];
+  // DEPRECATED. See TransformationParameter. Specify if we want to randomly mirror
+  // data.
+  optional bool mirror = 6 [default = false];
+}
+
 // Message that stores parameters used by VideoDataLayer
 message VideoDataParameter {
   // Specify the data source.
@@ -554,7 +585,6 @@ message VideoDataParameter {
   // data.
   optional bool mirror = 6 [default = false];
 }
-
 // Message that stores parameters InfogainLossLayer
 message InfogainLossParameter {
   // Specify the infogain matrix source.
