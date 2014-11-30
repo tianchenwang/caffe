@@ -306,16 +306,18 @@ void Solver<Dtype>::Solve(const char* resume_file) {
             net_->blob_names()[net_->output_blob_indices()[j]];
         const Dtype loss_weight =
             net_->blob_loss_weights()[net_->output_blob_indices()[j]];
+        double loss_sum = 0.0;
         for (int k = 0; k < result[j]->count(); ++k) {
-          ostringstream loss_msg_stream;
-          if (loss_weight) {
-            loss_msg_stream << " (* " << loss_weight
-                            << " = " << loss_weight * result_vec[k] << " loss)";
-          }
-          LOG(INFO) << "    Train net output #"
-              << score_index++ << ": " << output_name << " = "
-              << result_vec[k] << loss_msg_stream.str();
+          loss_sum += result_vec[k];
         }
+        ostringstream loss_msg_stream;
+        if (loss_weight) {
+          loss_msg_stream << " (* " << loss_weight
+                          << " = " << loss_weight * loss_sum << " loss)";
+        }
+        LOG(INFO) << "    Train net output #"
+            << score_index++ << ": " << output_name << " = "
+            << loss_sum << loss_msg_stream.str();
       }
     }
 
@@ -394,21 +396,23 @@ void Solver<Dtype>::Test(const int test_net_id) {
     loss /= param_.test_iter(test_net_id);
     LOG(INFO) << "Test loss: " << loss;
   }
+  double sum_mean_score = 0.0;
   for (int i = 0; i < test_score.size(); ++i) {
-    LOG(INFO) << "i2 = " << i<<" of "<<test_score.size();
-    const int output_blob_index =
-        test_net->output_blob_indices()[test_score_output_id[i]];
-    const string& output_name = test_net->blob_names()[output_blob_index];
-    const Dtype loss_weight = test_net->blob_loss_weights()[output_blob_index];
-    ostringstream loss_msg_stream;
     const Dtype mean_score = test_score[i] / param_.test_iter(test_net_id);
-    if (loss_weight) {
-      loss_msg_stream << " (* " << loss_weight
-                      << " = " << loss_weight * mean_score << " loss)";
-    }
-    LOG(INFO) << "    Test net output #" << i << ": " << output_name << " = "
-        << mean_score << loss_msg_stream.str();
+    sum_mean_score += mean_score;
   }
+  const int output_blob_index =
+      test_net->output_blob_indices()[test_score_output_id[0]];
+  const string& output_name = test_net->blob_names()[output_blob_index];
+  const Dtype loss_weight = test_net->blob_loss_weights()[output_blob_index];
+  ostringstream loss_msg_stream;
+  if (loss_weight) {
+    loss_msg_stream << " (* " << loss_weight
+                    << " = " << loss_weight * sum_mean_score << " loss)";
+  }
+  LOG(INFO) << "    Test net output #" << 0 << ": " << output_name << " = "
+      << sum_mean_score << loss_msg_stream.str();
+
   Caffe::set_phase(Caffe::TRAIN);
 }
 

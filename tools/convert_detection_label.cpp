@@ -59,13 +59,18 @@ bool ReadBoundingBoxLabelToDatum(
   const int img_height = height * grid_dim;
 
   // 1 pixel label, 4 bounding box coordinates.
+  const int num_mask_label = 1;
+  const int num_bb_labels = 4;
+  const int num_norm_labels = 2;
+  const int num_total_labels = num_mask_label + num_bb_labels + num_norm_labels;
   vector<cv::Mat *> labels;
-  for (int i = 0; i < 5; ++i) {
+  for (int i = 0; i < num_total_labels; ++i) {
     labels.push_back(
         new cv::Mat(img_height, img_width, CV_32F, cv::Scalar(0.0)));
   }
 
-  CHECK_EQ(bbs.size() % 4, 0);
+  CHECK_EQ(bbs.size() % num_bb_labels, 0);
+  int total_num_pixels = 0;
   for (int i = 0; i < bbs.size(); i += 4) {
     float xmin = bbs[i];
     float ymin = bbs[i + 1];
@@ -96,28 +101,45 @@ bool ReadBoundingBoxLabelToDatum(
     cv::Rect r(gxmin, gymin,
                gxmax - gxmin + (gxmax == gxmin && gxmax < img_width ? 1 : 0),
                gymax - gymin + (gymax == gymin && gymax < img_height ? 1 : 0));
-    float flabels[5] = {1.0, xmin, ymin, xmax, ymax};
-    for (int j = 0; j < 5; ++j) {
+
+    total_num_pixels += r.area();
+    int normalization_height = ymax - ymin == 0 ? 1 : ymax - ymin;
+    CHECK_GT(normalization_height, 0);
+    float flabels[num_total_labels] =
+        {1.0, xmin, ymin, xmax, ymax, 1.0 / normalization_height, 1.0};
+    for (int j = 0; j < num_total_labels; ++j) {
       cv::Mat roi(*labels[j], r);
       roi = cv::Scalar(flabels[j]);
     }
   }
 
-  datum->set_channels(5 * grid_dim * grid_dim);
+  if (total_num_pixels == 0) {
+    total_num_pixels = 1;
+  }
+  float reweight_value = 1.0 / total_num_pixels;
+  for (int y = 0; y < img_height; ++y) {
+    for (int x = 0; x < img_width; ++x) {
+      if (labels[num_total_labels - 1]->at<float>(x, y) == 1.0) {
+        labels[num_total_labels - 1]->at<float>(x, y) = reweight_value;
+      }
+    }
+  }
+
+  datum->set_channels(num_total_labels * grid_dim * grid_dim);
   datum->set_height(height);
   datum->set_width(width);
   datum->set_label(0); // dummy label
   datum->clear_data();
   datum->clear_float_data();
 
-  for (int m = 0; m < 5; ++m) {
+  for (int m = 0; m < num_total_labels; ++m) {
     for (int dy = 0; dy < grid_dim; ++dy) {
       for (int dx = 0; dx < grid_dim; ++dx) {
         for (int y = 0; y < img_height; y += grid_dim) {
           for (int x = 0; x < img_width; x += grid_dim) {
             float adjustment = 0;
             float val = labels[m]->at<float>(y + dy, x + dx);
-            if (m == 0) {
+            if (m == 0 || m > 4) {
               // do nothing
             } else if (labels[0]->at<float>(y + dy, x + dx) == 0.0) {
               // do nothing
@@ -136,9 +158,9 @@ bool ReadBoundingBoxLabelToDatum(
       }
     }
   }
-  CHECK_EQ(datum->float_data_size(), 5 * img_height * img_width);
 
-  for (int i = 0; i < 5; ++i) {
+  CHECK_EQ(datum->float_data_size(), num_total_labels * img_height * img_width);
+  for (int i = 0; i < num_total_labels; ++i) {
     delete labels[i];
   }
 

@@ -63,9 +63,13 @@ layers {
   bottom: "label"
   top: "pixel-label"
   top: "bb-label"
+  top: "height-label"
+  top: "norm-label"
   slice_param {
     slice_dim: 1
     slice_point: 16
+    slice_point: 80
+    slice_point: 96
   }
 }
 
@@ -79,6 +83,19 @@ layers {
   bottom: "pixel-label"
   bottom: "pixel-label"
   top: "pixel-block"
+  concat_param {
+    concat_dim: 1
+  }
+}
+
+layers {
+  name: "height-block"
+  type: CONCAT
+  bottom: "height-label"
+  bottom: "height-label"
+  bottom: "height-label"
+  bottom: "height-label"
+  top: "height-block"
   concat_param {
     concat_dim: 1
   }
@@ -103,7 +120,7 @@ layers {
     }
     bias_filler {
       type: "constant"
-      value: 0
+      value: 0.1
     }
   }
 }
@@ -148,14 +165,14 @@ layers {
     num_output: 256
     pad: 2
     kernel_size: 5
-    group: 1
+    group: 2
     weight_filler {
       type: "gaussian"
       std: 0.01
     }
     bias_filler {
       type: "constant"
-      value: 1
+      value: 0.1
     }
   }
 }
@@ -206,7 +223,7 @@ layers {
     }
     bias_filler {
       type: "constant"
-      value: 0
+      value: 0.1
     }
   }
 }
@@ -229,14 +246,14 @@ layers {
     num_output: 384
     pad: 1
     kernel_size: 3
-    group: 1
+    group: 2
     weight_filler {
       type: "gaussian"
       std: 0.01
     }
     bias_filler {
       type: "constant"
-      value: 1
+      value: 0.1
     }
   }
 }
@@ -259,14 +276,14 @@ layers {
     num_output: 256
     pad: 1
     kernel_size: 3
-    group: 1
+    group: 2
     weight_filler {
       type: "gaussian"
       std: 0.01
     }
     bias_filler {
       type: "constant"
-      value: 1
+      value: 0.1
     }
   }
 }
@@ -302,7 +319,7 @@ layers {
     pad: 3
     weight_filler {
       type: "gaussian"
-      std: 0.005
+      std: 0.01
     }
     bias_filler {
       type: "constant"
@@ -322,7 +339,7 @@ layers {
   bottom: "fc6-conv"
   top: "fc6-conv"
   dropout_param {
-    dropout_ratio: 0.5
+    dropout_ratio: 0.0
   }
 }
 layers {
@@ -339,7 +356,7 @@ layers {
     kernel_size: 1
     weight_filler {
       type: "gaussian"
-      std: 0.005
+      std: 0.01
     }
     bias_filler {
       type: "constant"
@@ -359,7 +376,7 @@ layers {
   bottom: "fc7-conv"
   top: "fc7-conv"
   dropout_param {
-    dropout_ratio: 0.5
+    dropout_ratio: 0.0
   }
 }
 
@@ -368,16 +385,16 @@ layers {
   type: CONVOLUTION
   bottom: "fc7-conv"
   top: "bb-output"
-  blobs_lr: 0.001
-  blobs_lr: 2
-  weight_decay: 1
+  blobs_lr: 100
+  blobs_lr: 200
+  weight_decay: 0.00001
   weight_decay: 0
   convolution_param {
     num_output: 64
     kernel_size: 1
     weight_filler {
       type: "gaussian"
-      std: 0.005
+      std: 0.01
     }
     bias_filler {
       type: "constant"
@@ -439,36 +456,60 @@ layers {
 }
 
 # Squared loss on the bounding boxes.
-layers {
-  name: "bb-loss"
-  type: EUCLIDEAN_LOSS
-  bottom: "bb-masked-output"
-  bottom: "bb-label"
-  top: "bb-loss"
-}
+#layers {
+#  name: "bb-loss"
+#  type: EUCLIDEAN_LOSS
+#  bottom: "bb-masked-output"
+#  bottom: "bb-label"
+#  top: "bb-loss"
+#  loss_weight: 0.01
+#}
 
 # L1 error loss
-#layers {
-#  name: "bb-diff"
-#  type: ELTWISE
-#  bottom: "bb-label"
-#  bottom: "bb-masked-output"
-#  eltwise_param {
-#    operation: SUM
-#    coeff: 1.0
-#    coeff: -1.0
-#  }
-#  top: "bb-diff"
-#}
+layers {
+  name: "bb-diff"
+  type: ELTWISE
+  bottom: "bb-masked-output"
+  bottom: "bb-label"
+  eltwise_param {
+    operation: SUM
+    coeff: 1.0
+    coeff: -1.0
+  }
+  top: "bb-diff"
+}
 
 #layers {
 #  name: "bb-loss"
 #  type: ABSVAL
 #  bottom: "bb-diff"
 #  top: "bb-loss"
-#  # 1 / (batch_size * 20 * 15 * 64)
-#  loss_weight: 0.00001041666666666
+#  # 1 / (20 * 15 * 64)
+#  loss_weight: 0.00000000001
 #}
+
+layers {
+  name: "bb-loss-pow2"
+  type: POWER
+  bottom: "bb-diff"
+  top: "bb-loss-pow2"
+  # 1 / (20 * 15 * 64)
+  power_param {
+    power: 2
+  }
+}
+
+layers {
+  name: "bb-loss-normalize"
+  type: ELTWISE
+  bottom: "bb-loss-pow2"
+  bottom: "height-block"
+  eltwise_param {
+    operation: PROD
+  }
+  top: "bb-loss"
+  loss_weight: 0.001
+}
 
 #layers {
 #  name: "bb-loss-silence"
