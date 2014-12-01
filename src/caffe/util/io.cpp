@@ -166,6 +166,16 @@ bool ReadImageToDatum(const string& filename, const int label,
   return true;
 }
 
+//added by Tao
+
+
+
+
+
+//end
+
+
+
 leveldb::Options GetLevelDBOptions() {
   // In default, we will return the leveldb option and set the max open files
   // in order to avoid using up the operating system's limit.

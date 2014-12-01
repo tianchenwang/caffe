@@ -36,7 +36,7 @@ distribute/*
 python/caffe/proto/
 
 # Editor temporaries
-*.swp
+*.sw?
 *~
 
 # IPython notebook checkpoints
