@@ -3,11 +3,12 @@ name: "BrodyNet"
 # Training input.
 layers {
   name: "data"
-  type: VIDEO_DATA
+  type: DATA
   top: "data"
-  video_data_param {
-    source: "/scail/group/deeplearning/driving_data/twangcat/schedules/q50_multilane_planar_train_schedule1_batch20_2cam.txt"
-    batch_size: 20
+  data_param {
+    source: "driving_img_train"
+    backend: LMDB
+    batch_size: 25
   }
   transform_param {
     mean_file: "driving_img_mean.binaryproto"
@@ -18,11 +19,12 @@ layers {
 # Bounding box label and pixel label.
 layers {
   name: "label"
-  type: MULTILANE_LABEL
+  type: DATA
   top: "label"
-  multilane_label_param {
-    source: "/scail/group/deeplearning/driving_data/twangcat/schedules/q50_multilane_planar_train_schedule1_batch20_2cam.txt"
-    batch_size: 20
+  data_param {
+    source: "driving_label_train"
+    backend: LMDB
+    batch_size: 25
   }
   include: { phase: TRAIN }
 }
@@ -33,9 +35,9 @@ layers {
   type: DATA
   top: "data"
   data_param {
-    source: "/deep/group/driving_data/twangcat/lmdb/driving_img_test"
+    source: "driving_img_test"
     backend: LMDB
-    batch_size: 20
+    batch_size: 25
   }
   transform_param {
     mean_file: "driving_img_mean.binaryproto"
@@ -49,9 +51,9 @@ layers {
   type: DATA
   top: "label"
   data_param {
-    source: "/deep/group/driving_data/twangcat/lmdb/driving_label_test"
+    source: "driving_label_test"
     backend: LMDB
-    batch_size: 20
+    batch_size: 25
   }
   include: { phase: TEST }
 }
@@ -63,13 +65,9 @@ layers {
   bottom: "label"
   top: "pixel-label"
   top: "bb-label"
-  top: "height-label"
-  top: "norm-label"
   slice_param {
     slice_dim: 1
     slice_point: 16
-    slice_point: 80
-    slice_point: 96
   }
 }
 
@@ -83,19 +81,6 @@ layers {
   bottom: "pixel-label"
   bottom: "pixel-label"
   top: "pixel-block"
-  concat_param {
-    concat_dim: 1
-  }
-}
-
-layers {
-  name: "height-block"
-  type: CONCAT
-  bottom: "height-label"
-  bottom: "height-label"
-  bottom: "height-label"
-  bottom: "height-label"
-  top: "height-block"
   concat_param {
     concat_dim: 1
   }
@@ -120,7 +105,7 @@ layers {
     }
     bias_filler {
       type: "constant"
-      value: 0.1
+      value: 0
     }
   }
 }
@@ -165,14 +150,14 @@ layers {
     num_output: 256
     pad: 2
     kernel_size: 5
-    group: 2
+    group: 1
     weight_filler {
       type: "gaussian"
       std: 0.01
     }
     bias_filler {
       type: "constant"
-      value: 0.1
+      value: 1
     }
   }
 }
@@ -223,7 +208,7 @@ layers {
     }
     bias_filler {
       type: "constant"
-      value: 0.1
+      value: 0
     }
   }
 }
@@ -246,14 +231,14 @@ layers {
     num_output: 384
     pad: 1
     kernel_size: 3
-    group: 2
+    group: 1
     weight_filler {
       type: "gaussian"
       std: 0.01
     }
     bias_filler {
       type: "constant"
-      value: 0.1
+      value: 1
     }
   }
 }
@@ -276,14 +261,14 @@ layers {
     num_output: 256
     pad: 1
     kernel_size: 3
-    group: 2
+    group: 1
     weight_filler {
       type: "gaussian"
       std: 0.01
     }
     bias_filler {
       type: "constant"
-      value: 0.1
+      value: 1
     }
   }
 }
@@ -319,7 +304,7 @@ layers {
     pad: 3
     weight_filler {
       type: "gaussian"
-      std: 0.01
+      std: 0.005
     }
     bias_filler {
       type: "constant"
@@ -339,7 +324,7 @@ layers {
   bottom: "fc6-conv"
   top: "fc6-conv"
   dropout_param {
-    dropout_ratio: 0.0
+    dropout_ratio: 0.5
   }
 }
 layers {
@@ -356,7 +341,7 @@ layers {
     kernel_size: 1
     weight_filler {
       type: "gaussian"
-      std: 0.01
+      std: 0.005
     }
     bias_filler {
       type: "constant"
@@ -376,7 +361,7 @@ layers {
   bottom: "fc7-conv"
   top: "fc7-conv"
   dropout_param {
-    dropout_ratio: 0.0
+    dropout_ratio: 0.5
   }
 }
 
@@ -385,16 +370,16 @@ layers {
   type: CONVOLUTION
   bottom: "fc7-conv"
   top: "bb-output"
-  blobs_lr: 100
-  blobs_lr: 200
-  weight_decay: 0.00001
+  blobs_lr: 0.001
+  blobs_lr: 2
+  weight_decay: 1
   weight_decay: 0
   convolution_param {
     num_output: 64
     kernel_size: 1
     weight_filler {
       type: "gaussian"
-      std: 0.01
+      std: 0.005
     }
     bias_filler {
       type: "constant"
@@ -456,63 +441,10 @@ layers {
 }
 
 # Squared loss on the bounding boxes.
-#layers {
-#  name: "bb-loss"
-#  type: EUCLIDEAN_LOSS
-#  bottom: "bb-masked-output"
-#  bottom: "bb-label"
-#  top: "bb-loss"
-#  loss_weight: 0.01
-#}
-
-# L1 error loss
 layers {
-  name: "bb-diff"
-  type: ELTWISE
+  name: "bb-loss"
+  type: EUCLIDEAN_LOSS
   bottom: "bb-masked-output"
   bottom: "bb-label"
-  eltwise_param {
-    operation: SUM
-    coeff: 1.0
-    coeff: -1.0
-  }
-  top: "bb-diff"
-}
-
-#layers {
-#  name: "bb-loss"
-#  type: ABSVAL
-#  bottom: "bb-diff"
-#  top: "bb-loss"
-#  # 1 / (20 * 15 * 64)
-#  loss_weight: 0.00000000001
-#}
-
-layers {
-  name: "bb-loss-pow2"
-  type: POWER
-  bottom: "bb-diff"
-  top: "bb-loss-pow2"
-  # 1 / (20 * 15 * 64)
-  power_param {
-    power: 2
-  }
-}
-
-layers {
-  name: "bb-loss-normalize"
-  type: ELTWISE
-  bottom: "bb-loss-pow2"
-  bottom: "height-block"
-  eltwise_param {
-    operation: PROD
-  }
   top: "bb-loss"
-  loss_weight: 0.001
 }
-
-#layers {
-#  name: "bb-loss-silence"
-#  type: SILENCE
-#  bottom: "bb-loss"
-#}
