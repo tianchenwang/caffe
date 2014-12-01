@@ -105,6 +105,9 @@ inline bool ReadImageToDatum(const string& filename, const int label,
   return ReadImageToDatum(filename, label, 0, 0, datum);
 }
 
+
+
+
 leveldb::Options GetLevelDBOptions();
 
 template <typename Dtype>

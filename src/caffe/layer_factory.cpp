@@ -1,5 +1,4 @@
 #include <string>
-
 #include "caffe/layer.hpp"
 #include "caffe/proto/caffe.pb.h"
 #include "caffe/vision_layers.hpp"
@@ -223,6 +222,8 @@ Layer<Dtype>* GetLayer(const LayerParameter& param) {
     return new LRNLayer<Dtype>(param);
   case LayerParameter_LayerType_MEMORY_DATA:
     return new MemoryDataLayer<Dtype>(param);
+  case LayerParameter_LayerType_MULTILANE_LABEL:
+    return new MultilaneLabelLayer<Dtype>(param);
   case LayerParameter_LayerType_MVN:
     return new MVNLayer<Dtype>(param);
   case LayerParameter_LayerType_MULTINOMIAL_LOGISTIC_LOSS:
@@ -249,6 +250,8 @@ Layer<Dtype>* GetLayer(const LayerParameter& param) {
     return new SplitLayer<Dtype>(param);
   case LayerParameter_LayerType_TANH:
     return GetTanHLayer<Dtype>(name, param);
+  case LayerParameter_LayerType_VIDEO_DATA:
+    return new VideoDataLayer<Dtype>(param);
   case LayerParameter_LayerType_WINDOW_DATA:
     return new WindowDataLayer<Dtype>(param);
   case LayerParameter_LayerType_NONE:
