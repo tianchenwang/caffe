@@ -58,7 +58,7 @@ layers {
   include: { phase: TEST }
 }
 
-# Splite label layer into pixel and bounding box label.
+# Split label layer into pixel and bounding box label.
 layers {
   name: "slice-label"
   type: SLICE
@@ -510,7 +510,7 @@ layers {
     operation: PROD
   }
   top: "bb-loss"
-  loss_weight: 0.001
+  loss_weight: 0.1
 }
 
 #layers {
