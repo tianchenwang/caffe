@@ -37,7 +37,6 @@ def main():
     bbs = tokens[2:]
     gt_bbs = get_gt_bbs(bbs)
 
-    img_name = fname.split('/')[-1]
     # print img_name, '...',
     start = time.time()
     scores = net.ff([caffe.io.load_image(fname)])
@@ -47,19 +46,8 @@ def main():
     rects = get_rects(net.blobs['bb-output'].data[4], mask)
 
     if args.dump_images:
-      assert output_path != ''
-      image = net.deprocess('data', net.blobs['data'].data[4])
-      zoomed_mask = np.empty((480, 640))
-      zoomed_mask = scipy.ndimage.zoom(mask, 8, order=0)
-      masked_image = image.transpose((2, 0, 1))
-      masked_image[0, :, :] += zoomed_mask
-      masked_image = np.clip(masked_image, 0, 1)
-      masked_image = masked_image.transpose((1, 2, 0))
-      boxed_image = np.copy(masked_image)
-      if len(rects) > 0:
-        boxed_image = draw_rects(boxed_image, rects)
-      Image.fromarray(
-          (boxed_image * 255).astype('uint8')).save(args.output_path + '/' + img_name)
+      img_name = fname.split('/')[-1]
+      dump_image(net, mask, rects, args.output_path + img_name)
 
     used_rect = set()
     for bb in gt_bbs:
