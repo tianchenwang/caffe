@@ -466,6 +466,8 @@ LayerParameter_LayerType UpgradeV0LayerType(const string& type) {
     return LayerParameter_LayerType_DROPOUT;
   } else if (type == "euclidean_loss") {
     return LayerParameter_LayerType_EUCLIDEAN_LOSS;
+  } else if (type == "l1_loss") {
+    return LayerParameter_LayerType_L1_LOSS;
   } else if (type == "flatten") {
     return LayerParameter_LayerType_FLATTEN;
   } else if (type == "hdf5_data") {

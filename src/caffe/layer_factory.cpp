@@ -254,6 +254,8 @@ Layer<Dtype>* GetLayer(const LayerParameter& param) {
     return new VideoDataLayer<Dtype>(param);
   case LayerParameter_LayerType_WINDOW_DATA:
     return new WindowDataLayer<Dtype>(param);
+  case LayerParameter_LayerType_L1_LOSS:
+    return new L1LossLayer<Dtype>(param);
   case LayerParameter_LayerType_NONE:
     LOG(FATAL) << "Layer " << name << " has unspecified type.";
   default:

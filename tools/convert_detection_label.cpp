@@ -113,14 +113,13 @@ bool ReadBoundingBoxLabelToDatum(
     }
   }
 
-  if (total_num_pixels == 0) {
-    total_num_pixels = 1;
-  }
-  float reweight_value = 1.0 / total_num_pixels;
-  for (int y = 0; y < img_height; ++y) {
-    for (int x = 0; x < img_width; ++x) {
-      if (labels[num_total_labels - 1]->at<float>(x, y) == 1.0) {
-        labels[num_total_labels - 1]->at<float>(x, y) = reweight_value;
+  if (total_num_pixels != 0) {
+    float reweight_value = 1.0 / total_num_pixels;
+    for (int y = 0; y < img_height; ++y) {
+      for (int x = 0; x < img_width; ++x) {
+        if (labels[num_total_labels - 1]->at<float>(y, x) == 1.0) {
+          labels[num_total_labels - 1]->at<float>(y, x) = reweight_value;
+        }
       }
     }
   }
