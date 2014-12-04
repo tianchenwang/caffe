@@ -271,14 +271,14 @@ void VideoDataLayer<Dtype>::InternalThreadEntry() {
     // Apply transformations (mirror, crop...) to the data
     this->data_transformer_.Transform(item_id, datum, this->mean_, top_data);
     // go to the next iter
-    lines_id_++;
-    if (lines_id_ >= lines_size) {
-      // We have reached the end. Restart from the first.
-      DLOG(INFO) << "Restarting data prefetching from start.";
-      lines_id_ = 0;
-      if (this->layer_param_.image_data_param().shuffle()) {
-        ShuffleBatches();
-      }
+  }
+  lines_id_++;
+  if (lines_id_ >= lines_size) {
+    // We have reached the end. Restart from the first.
+    DLOG(INFO) << "Restarting data prefetching from start.";
+    lines_id_ = 0;
+    if (this->layer_param_.image_data_param().shuffle()) {
+      ShuffleBatches();
     }
   }
   this->cap->release();

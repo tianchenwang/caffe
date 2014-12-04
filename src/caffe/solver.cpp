@@ -8,6 +8,7 @@
 #include "caffe/proto/caffe.pb.h"
 #include "caffe/solver.hpp"
 #include "caffe/util/io.hpp"
+#include "caffe/util/plot.hpp"
 #include "caffe/util/math_functions.hpp"
 #include "caffe/util/upgrade_proto.hpp"
 
@@ -47,7 +48,7 @@ void Solver<Dtype>::Init(const SolverParameter& param) {
   }
   // Scaffolding code
   InitTrainNet();
-  InitTestNets();
+  //InitTestNets();
   LOG(INFO) << "Solver scaffolding done.";
 }
 
@@ -200,103 +201,60 @@ void Solver<Dtype>::Solve(const char* resume_file) {
     if (display) {
       LOG(INFO) << "Iteration " << iter_ << ", loss = " << loss;
       const vector<Blob<Dtype>*>& result = net_->output_blobs();
-      //added by Tao. for debugging purpose only
-      const vector<string>& blob_names = net_->blob_names();
-      const vector<shared_ptr<Blob<Dtype> > >& blobs = net_->blobs();
-      string str1("data");
-      string str2("label");
-      string str3("pixel-label");
-      string str4("bb-label");
-      string save_dir("/scr/twangcat/caffenet_results/train/");
+      //added by Tao. To visualize the ground truth and predictions.
+      bool predict_depth = true;
+      string img_str("data");
+      string pix_str("pixel-label");
+      string reg_str("bb-label");
+      // copy labels and predictions out
+      const shared_ptr<Blob<Dtype> > img_blob = net_->blob_by_name(img_str);
+      const shared_ptr<Blob<Dtype> > pix_blob = net_->blob_by_name(pix_str);
+      const shared_ptr<Blob<Dtype> > reg_blob = net_->blob_by_name(reg_str);
       vector<cv::Mat> save_imgs;
-      int quad_height;
-      int quad_width;
-      int batch_size;
-      const Dtype* pix_start;
-      const Dtype* bb_start;
-      for (int j = 0; j < blobs.size(); ++j) {
-        if(blob_names[j].compare(str3)==0) //pixel label
+      const Dtype* pix_start = pix_blob->cpu_data();
+      const Dtype* bb_start = reg_blob->cpu_data();
+      const Dtype* data_start = img_blob->cpu_data();
+      //LOG(INFO) << "pixel-label " << pix_blob->num()<<" "<<pix_blob->channels()<<" "<<pix_blob->height()<<" "<<pix_blob->width();
+      //LOG(INFO) << "bb-label " << reg_blob->num()<<" "<<reg_blob->channels()<<" "<<reg_blob->height()<<" "<<reg_blob->width();
+      //LOG(INFO) << "data " << img_blob->num()<<" "<<img_blob->channels()<<" "<<img_blob->height()<<" "<<img_blob->width();
+      for(int n=0; n<img_blob->num(); ++n)
+      {
+        cv::Mat curr_img = cv::Mat(img_blob->height(), img_blob->width(), CV_32FC3);
+        for(int kk=0; kk<img_blob->channels();++kk)
         {
-          LOG(INFO) << "pixel-label " << blobs[j]->num()<<" "<<blobs[j]->channels()<<" "<<blobs[j]->height()<<" "<<blobs[j]->width();
-          pix_start = blobs[j]->cpu_data();
-          quad_height = blobs[j]->height();
-          quad_width = blobs[j]->width();
-          batch_size = blobs[j]->num();
-        }
-        if(blob_names[j].compare(str4)==0) // bb label
-        {
-          LOG(INFO) << "bb-label " << blobs[j]->num()<<" "<<blobs[j]->channels()<<" "<<blobs[j]->height()<<" "<<blobs[j]->width();
-          bb_start = blobs[j]->cpu_data();
-        }
-        if(blob_names[j].compare(str1)==0) // actual image
-        {
-          LOG(INFO) << "data " << blobs[j]->num()<<" "<<blobs[j]->channels()<<" "<<blobs[j]->height()<<" "<<blobs[j]->width();
-          const Dtype* data_start = blobs[j]->cpu_data();
-          for(int n=0; n<blobs[j]->num(); ++n)
+          for(int yy=0; yy<img_blob->height();++yy)
           {
-            cv::Mat curr_img = cv::Mat(blobs[j]->height(), blobs[j]->width(), CV_32FC3, cv::Scalar(0,0,255));
-            for(int kk=0; kk<blobs[j]->channels();++kk)
+            for(int xx=0; xx<img_blob->width();++xx)
             {
-              for(int yy=0; yy<blobs[j]->height();++yy)
-              {
-                for(int xx=0; xx<blobs[j]->width();++xx)
-                {
-                  curr_img.at<cv::Vec3f>(yy,xx)[kk]=*(data_start+(((n*blobs[j]->channels() + kk) * blobs[j]->height() + yy) * blobs[j]->width() + xx));
-                }
-              }
+              curr_img.at<cv::Vec3f>(yy,xx)[kk]=*(data_start+(((n*img_blob->channels() + kk) * img_blob->height() + yy) * img_blob->width() + xx));
             }
-            save_imgs.push_back(curr_img); 
           }
         }
+        save_imgs.push_back(curr_img); 
       }
+      // draw ground truth and predictions on image.
+      string save_dir("/scr/twangcat/caffenet_results/train/");
+      int quad_height = pix_blob->height();
+      int quad_width = pix_blob->width();
+      int batch_size = pix_blob->num();
       int grid_dim=4;
-      int label_count = 0;
+      int grid_length = grid_dim*grid_dim;
       int label_height = quad_height*grid_dim;
       int label_width = quad_width*grid_dim;
-      Dtype scaling = 1.0/8;
+      int num_regression=predict_depth ? 6:4;
+      double scaling = 8.0; // ratio of image size to pix label size
       for(int n=0; n<batch_size; ++n){
         int image_id = this->iter_*5+n;
         cv::Mat save_img = save_imgs[n];
         std::ostringstream stringStream;
         stringStream <<save_dir<< "img"<<image_id<<".png";
         std::string save_name = stringStream.str();
-        for (int z=0; z<16;++z){
-          for (int qy = 0; qy < quad_height; ++qy) {
-            for (int qx = 0; qx < quad_width; ++qx) {
-              int dx = z%grid_dim;
-              int dy = z/grid_dim;
-              int x = qx*grid_dim+dx;
-              int y = qy*grid_dim+dy;
-              if (*(pix_start+(((n*16+z)*quad_height+qy)*quad_width+qx)) <0.5) {
-                // do nothing
-              } else{
-
-                save_img.at<cv::Vec3f>(y/scaling,x/scaling) = cv::Vec3f(0,255,0);
-                save_img.at<cv::Vec3f>(y/scaling-1,x/scaling-1) = cv::Vec3f(0,255,0);
-                save_img.at<cv::Vec3f>(y/scaling+1,x/scaling-1) = cv::Vec3f(0,255,0);
-                save_img.at<cv::Vec3f>(y/scaling-1,x/scaling+1) = cv::Vec3f(0,255,0);
-                save_img.at<cv::Vec3f>(y/scaling+1,x/scaling+1) = cv::Vec3f(0,255,0);
-
-                float x_adj = (qx*grid_dim + grid_dim / 2) / scaling;
-                float y_adj = (qy*grid_dim + grid_dim / 2) / scaling;
-                //std::cout<<*(bb_start+(((n*64+z)*quad_height+qy)*quad_width+qx))<<" ";
-                //std::cout<<*(bb_start+(((n*64+z+16)*quad_height+qy)*quad_width+qx))<<" ";
-                //std::cout<<*(bb_start+(((n*64+z+32)*quad_height+qy)*quad_width+qx))<<" ";
-                //std::cout<<*(bb_start+(((n*64+z+48)*quad_height+qy)*quad_width+qx))<<std::endl;
-                int x_min = *(bb_start+(((n*64+z)*quad_height+qy)*quad_width+qx))+x_adj;
-                int y_min = *(bb_start+(((n*64+z+16)*quad_height+qy)*quad_width+qx))+y_adj;
-                int x_max = *(bb_start+(((n*64+z+32)*quad_height+qy)*quad_width+qx))+x_adj;
-                int y_max = *(bb_start+(((n*64+z+48)*quad_height+qy)*quad_width+qx))+y_adj;
-                //cv::Rect bb(x_min, y_min, x_max-x_min+1, y_max-y_min+1); 
-                //cv::rectangle(save_img, bb, cv::Scalar(100, 100, 200), 2);
-                cv::Point p1(x_min, y_min);
-                cv::Point p2(x_max, y_max);
-                cv::line(save_img,p1,p2,cv::Scalar(100, 100, 200), 2);
-              }
-            }
-          }
-          cv::imwrite(save_name, save_img);
-        }
+        const Dtype* pix_label = pix_start+n*grid_length*quad_height*quad_width;
+        const Dtype* reg_label = bb_start+n*num_regression*grid_length*quad_height*quad_width;
+        drawResults<Dtype>(save_img, pix_label, reg_label, 
+                           predict_depth, scaling, num_regression, 
+                           quad_height, quad_width, grid_dim);
+        cv::imwrite(save_name, save_img);
       }
       //end
       int score_index = 0;

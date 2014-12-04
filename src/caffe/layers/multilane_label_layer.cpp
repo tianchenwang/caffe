@@ -108,13 +108,15 @@ void MultilaneLabelLayer<Dtype>::DataLayerSetUp(const vector<Blob<Dtype>*>& bott
   }
   const int crop_size = this->layer_param_.transform_param().crop_size();
   const int batch_size = this->layer_param_.multilane_label_param().batch_size();
+  const bool predict_depth = this->layer_param_.multilane_label_param().predict_depth();
+  const int blob_depth = predict_depth? 112:80; //TODO: make this changable in caffe.proto
   if (crop_size > 0) {
-    (*top)[0]->Reshape(batch_size, 80, crop_size, crop_size);
-    this->prefetch_data_.Reshape(batch_size, 80, crop_size,
+    (*top)[0]->Reshape(batch_size, blob_depth, crop_size, crop_size);
+    this->prefetch_data_.Reshape(batch_size, blob_depth, crop_size,
                                  crop_size);
   } else {
-    (*top)[0]->Reshape(batch_size, 80, 15,20);
-    this->prefetch_data_.Reshape(batch_size, 80, 15,20);
+    (*top)[0]->Reshape(batch_size, blob_depth, 15,20);
+    this->prefetch_data_.Reshape(batch_size, blob_depth, 15,20);
   }
   LOG(INFO) << "output data size: " << (*top)[0]->num() << ","
       << (*top)[0]->channels() << "," << (*top)[0]->height() << ","
@@ -123,10 +125,10 @@ void MultilaneLabelLayer<Dtype>::DataLayerSetUp(const vector<Blob<Dtype>*>& bott
   //(*top)[1]->Reshape(batch_size, 1, 1, 1);
   this->prefetch_label_.Reshape(batch_size, 1, 1, 1);
   // datum size
-  this->datum_channels_ = 80;
+  this->datum_channels_ = blob_depth;
   this->datum_height_ = 15;
   this->datum_width_ = 20;
-  this->datum_size_ = 80*15*20;
+  this->datum_size_ = blob_depth*15*20;
 }
 
 template <typename Dtype>
@@ -173,7 +175,8 @@ void MultilaneLabelLayer<Dtype>::InternalThreadEntry() {
     // initialize python helper class
     py::object module = py::import("multilane_label_reader");
     py::object readerClass = module.attr("MultilaneLabelReader");
-    py::object reader = readerClass();
+    const bool predict_depth = this->layer_param_.multilane_label_param().predict_depth();
+    py::object reader = readerClass(predict_depth);
     // initialize arguments to python helper class function
     np::dtype dt = np::dtype::get_builtin<int>();
     py::tuple shape = py::make_tuple(batch_size) ;
@@ -193,7 +196,7 @@ void MultilaneLabelLayer<Dtype>::InternalThreadEntry() {
   np::ndarray pArray = np::from_object(arr_handle);
   
   int array_size = py::extract<int>(pArray.attr("size"));
-  LOG(INFO)<<"numpy array size = "<<array_size;
+  //LOG(INFO)<<"numpy array size = "<<array_size;
   float* pArrayPtr = (float*)(pArray.get_data());
   std::copy(pArrayPtr, pArrayPtr+array_size, top_data);
   // go to the next iter

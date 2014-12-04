@@ -55,7 +55,7 @@ def colorful_line(img, start, end, start_color, end_color, thickness):
 
 
 class MultilaneLabelReader():
-    def __init__(self, imdepth=3, imwidth=640, imheight=480, markingWidth=0.07, distortion_file='/scail/group/deeplearning/driving_data/perspective_transforms.pickle', pixShift=0, label_dim = [80,60], new_distort=False, predict_depth = False, readVideo=False):
+    def __init__(self, predict_depth = True, imdepth=3, imwidth=640, imheight=480, markingWidth=0.07, distortion_file='/scail/group/deeplearning/driving_data/perspective_transforms.pickle', pixShift=0, label_dim = [80,60], new_distort=False, readVideo=False):
       self.new_distort = new_distort
       if new_distort:
         self.Ps = setPersp()
@@ -261,7 +261,6 @@ class MultilaneLabelReader():
                     regx1 = imgpix[0,ip]
                     regy1 = imgpix[1,ip]
                     depth1 = depths[ip]
-                    #print ['1 changed', regx1, regy1, xc, yc]
                   else:
                     if self.predict_depth:
                       regx1 = float(temp_reg1[yc,xc,0])
@@ -322,23 +321,21 @@ class MultilaneLabelReader():
                         cv2.line(img, (reg_label[ii,jj,0],reg_label[ii,jj,1]), (reg_label[ii,jj,2], reg_label[ii,jj,3]), self.colors[int(temp_label[ii,jj]-1)%len(self.colors)], thickness=2 )
               cv2.imwrite('/scr/twangcat/lane_detect_results/test2/label_'+str(self.count)+'.png', np.clip(img, 0,255).astype('u1'))
             self.count+=1
-        # push a batch of data to the data queue
-        #self.q.put([labels.astype(np.float32),reg_labels,weight_labels,Pid, cam, labels_3d, trajectory_3d])
+        # reshape a batch of label into the right format.
+        # caffe does not support 'output block' sizes >1, so flatten it into the z dimension.
         label_view = np.transpose(labels, [0,3,1,2]).reshape(batchSize, 1, self.labelh//self.griddim, self.griddim, self.labelw//self.griddim, self.griddim, order='C')
         label_grid = np.transpose(label_view,[0,1,3,5,2,4]).reshape(batchSize, self.griddim*self.griddim,self.labelh//self.griddim,self.labelw//self.griddim, order='C')
         reg_view = np.transpose(reg_labels, [0,3,1,2]).reshape(batchSize, self.labeld, self.labelh//self.griddim, self.griddim, self.labelw//self.griddim, self.griddim)
         reg_grid = np.transpose(reg_view,[0,1,3,5,2,4]).reshape(batchSize, self.labeld*self.griddim*self.griddim,self.labelh//self.griddim,self.labelw//self.griddim)
-        full_label = np.empty([batchSize, 80, 15, 20], dtype='f4',order='C')
-        full_label[:,0:16,:,:] = label_grid
-        full_label[:,16:,:,:] = reg_grid
+        full_label = np.empty([batchSize, (self.griddim**2)*(self.labeld+1), self.labelh//self.griddim, self.labelw//self.griddim], dtype='f4',order='C')
+        full_label[:,0:(self.griddim**2),:,:] = label_grid # binary mask label comes first along the z dimension
+        full_label[:,(self.griddim**2):,:,:] = reg_grid  # followed by the regression labels for each channel.
         return full_label
 
 
 
     def runLabelling(self, f, frames, Pid): # filename, frame numbers, transformation ids
         Pid = Pid.tolist()
-        print frames
-        print Pid
         cam_num = int(f[-5])
         splitidx = string.index(f,'split_')
         split_num = int(f[splitidx+6])
