@@ -28,6 +28,45 @@ message Datum {
   repeated float float_data = 6;
 }
 
+message CarBoundingBox {
+  optional int32 xmin = 1;
+  optional int32 ymin = 2;
+  optional int32 xmax = 3;
+  optional int32 ymax = 4;
+  optional float depth = 5;
+  optional float velocity_x = 6;
+  optional float velocity_y = 7;
+  optional float velocity_z = 8;
+  optional float rel_speed = 9;
+  optional int32 img_width = 10;
+  optional int32 img_height = 11;
+}
+
+message DrivingData {
+  // Image datum for the car.
+  optional Datum car_image_datum = 1;
+  // Image location for the car image.
+  optional string car_img_source = 2;
+  // List of bounding boxes.
+  repeated CarBoundingBox car_boxes = 3;
+  // Lane video path.
+  optional string lane_video_source = 4;
+  // Lane frame number.
+  optional int32 lane_framenum = 5;
+  // Lane perspective id.
+  optional int32 lane_perspective_id = 6;
+  // Image width after cropping.
+  optional int32 car_cropped_width = 7 [default = 640];
+  // Image height after cropping.
+  optional int32 car_cropped_height = 8 [default = 480];
+  // Car label width before tiling.
+  optional int32 car_label_width = 9 [default = 20];
+  // Car label height before tiling.
+  optional int32 car_label_height = 10 [default = 15];
+  // Tiling dimensions.
+  optional int32 car_label_resolution = 11 [default = 4];
+}
+
 message FillerParameter {
   // The filler type.
   optional string type = 1 [default = 'constant'];
@@ -219,7 +258,7 @@ message LayerParameter {
   // line above the enum. Update the next available ID when you add a new
   // LayerType.
   //
-  // LayerType next available ID: 41 (last added: L1_LOSS)
+  // LayerType next available ID: 43 (last added: TILING)
   enum LayerType {
     // "NONE" layer type is 0th enum element so that we don't cause confusion
     // by defaulting to an existent LayerType (instead, should usually error if
@@ -265,6 +304,8 @@ message LayerParameter {
     THRESHOLD = 31;
     VIDEO_DATA=38;
     WINDOW_DATA = 24;
+    DRIVING_DATA = 41;
+    TILING = 42;
   }
   optional LayerType type = 5; // the layer type from the enum above
 
@@ -322,6 +363,7 @@ message LayerParameter {
   optional ThresholdParameter threshold_param = 25;
   optional VideoDataParameter video_data_param = 41;
   optional WindowDataParameter window_data_param = 20;
+  optional TilingParameter tiling_param = 43;
 
   // Parameters for data pre-processing.
   optional TransformationParameter transform_param = 36;
@@ -349,6 +391,8 @@ message TransformationParameter {
   // Specify if we would like to randomly crop an image.
   optional uint32 crop_size = 3 [default = 0];
   optional string mean_file = 4;
+  optional uint32 crop_width = 5 [default = 0];
+  optional uint32 crop_height = 6 [default = 0];
 }
 
 // Message that stores parameters used by AccuracyLayer
@@ -750,6 +794,15 @@ message WindowDataParameter {
   optional string crop_mode = 11 [default = "warp"];
 }
 
+// Message that stores parameters for transforming a C x H x W blob into a
+// C/t^2 x H*t x W*t blob where t is the tile dimension, and each pixel in
+// the input is turned into a txt grid from the channels in row major order.
+message TilingParameter {
+  // Dimension of each tile. The number of input channels must be a multiple
+  // of the square of this number.
+  optional int32 tile_dim = 1;
+}
+
 // DEPRECATED: V0LayerParameter is the old way of specifying layer parameters
 // in Caffe.  We keep this message type around for legacy support.
 message V0LayerParameter {
@@ -842,3 +895,5 @@ message V0LayerParameter {
 
   optional HDF5OutputParameter hdf5_output_param = 1001;
 }
+
+

@@ -19,10 +19,12 @@ def main(argv):
   mean_data.ParseFromString(open(sys.argv[1]).read())
 
   mean_data = np.array(mean_data.data)
+  print mean_data.shape
   mean_img = mean_data.reshape([3, 480, 640])
   mean_img = mean_img[(2, 1, 0), :, :]
-  np.save(open('mean_r.npy', 'wb'), mean_img)
+  np.save(open('new_driving_mean.npy', 'wb'), mean_img)
 
+  """
   mean_img = np.transpose(mean_img, (1, 2, 0))
   Image.fromarray(mean_img.astype('uint8')).save('mean.png')
 
@@ -31,6 +33,7 @@ def main(argv):
   real_img = caffe.io.resize_image(real_img * 255, (480, 640, 3))
   Image.fromarray(real_img.astype('uint8')).save('original.png')
   Image.fromarray(np.clip(real_img - mean_img, 0, 255).astype('uint8')).save('sub.png')
+  """
 
 if __name__ == '__main__':
   import sys

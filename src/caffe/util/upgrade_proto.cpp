@@ -502,6 +502,10 @@ LayerParameter_LayerType UpgradeV0LayerType(const string& type) {
     return LayerParameter_LayerType_TANH;
   } else if (type == "window_data") {
     return LayerParameter_LayerType_WINDOW_DATA;
+  } else if (type == "driving_data") {
+    return LayerParameter_LayerType_DRIVING_DATA;
+  } else if (type == "tiling") {
+    return LayerParameter_LayerType_TILING;
   } else {
     LOG(FATAL) << "Unknown layer name: " << type;
     return LayerParameter_LayerType_NONE;

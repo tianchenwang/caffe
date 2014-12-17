@@ -48,7 +48,7 @@ void SoftmaxWithLossLayer<Dtype>::Forward_cpu(
                            Dtype(FLT_MIN)));
     }
   }
-  (*top)[0]->mutable_cpu_data()[0] = loss / num / spatial_dim;
+  (*top)[0]->mutable_cpu_data()[0] = loss / num;
   if (top->size() == 2) {
     (*top)[1]->ShareData(prob_);
   }
@@ -78,7 +78,7 @@ void SoftmaxWithLossLayer<Dtype>::Backward_cpu(const vector<Blob<Dtype>*>& top,
     }
     // Scale gradient
     const Dtype loss_weight = top[0]->cpu_diff()[0];
-    caffe_scal(prob_.count(), loss_weight / num / spatial_dim, bottom_diff);
+    caffe_scal(prob_.count(), loss_weight / num, bottom_diff);
   }
 }
 

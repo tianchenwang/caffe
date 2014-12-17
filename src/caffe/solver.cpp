@@ -189,10 +189,10 @@ void Solver<Dtype>::Solve(const char* resume_file) {
       Snapshot();
     }
 
-    //if (param_.test_interval() && iter_ % param_.test_interval() == 0
-    //    && (iter_ > 0 || param_.test_initialization())) {
-    //  TestAll();
-    //}
+    if (param_.test_interval() && iter_ % param_.test_interval() == 0
+        && (iter_ > 0 || param_.test_initialization())) {
+      TestAll();
+    }
 
     const bool display = param_.display() && iter_ % param_.display() == 0;
     net_->set_debug_info(display && param_.debug_info());
@@ -200,7 +200,9 @@ void Solver<Dtype>::Solve(const char* resume_file) {
     if (display) {
       LOG(INFO) << "Iteration " << iter_ << ", loss = " << loss;
       const vector<Blob<Dtype>*>& result = net_->output_blobs();
+
       //added by Tao. for debugging purpose only
+      /*
       const vector<string>& blob_names = net_->blob_names();
       const vector<shared_ptr<Blob<Dtype> > >& blobs = net_->blobs();
       string str1("data");
@@ -245,7 +247,7 @@ void Solver<Dtype>::Solve(const char* resume_file) {
                 }
               }
             }
-            save_imgs.push_back(curr_img); 
+            save_imgs.push_back(curr_img);
           }
         }
       }
@@ -287,7 +289,7 @@ void Solver<Dtype>::Solve(const char* resume_file) {
                 int y_min = *(bb_start+(((n*64+z+16)*quad_height+qy)*quad_width+qx))+y_adj;
                 int x_max = *(bb_start+(((n*64+z+32)*quad_height+qy)*quad_width+qx))+x_adj;
                 int y_max = *(bb_start+(((n*64+z+48)*quad_height+qy)*quad_width+qx))+y_adj;
-                //cv::Rect bb(x_min, y_min, x_max-x_min+1, y_max-y_min+1); 
+                //cv::Rect bb(x_min, y_min, x_max-x_min+1, y_max-y_min+1);
                 //cv::rectangle(save_img, bb, cv::Scalar(100, 100, 200), 2);
                 cv::Point p1(x_min, y_min);
                 cv::Point p2(x_max, y_max);
@@ -298,6 +300,7 @@ void Solver<Dtype>::Solve(const char* resume_file) {
           cv::imwrite(save_name, save_img);
         }
       }
+      */
       //end
       int score_index = 0;
       for (int j = 0; j < result.size(); ++j) {
@@ -338,9 +341,9 @@ void Solver<Dtype>::Solve(const char* resume_file) {
     net_->Forward(bottom_vec, &loss);
     LOG(INFO) << "Iteration " << iter_ << ", loss = " << loss;
   }
-  //if (param_.test_interval() && iter_ % param_.test_interval() == 0) {
-  //  TestAll();
-  //}
+  if (param_.test_interval() && iter_ % param_.test_interval() == 0) {
+    TestAll();
+  }
   LOG(INFO) << "Optimization Done.";
 }
 
@@ -367,13 +370,13 @@ void Solver<Dtype>::Test(const int test_net_id) {
   const shared_ptr<Net<Dtype> >& test_net = test_nets_[test_net_id];
   Dtype loss = 0;
   for (int i = 0; i < param_.test_iter(test_net_id); ++i) {
-    LOG(INFO) << "i = " << i<<" of "<<param_.test_iter(test_net_id);
     Dtype iter_loss;
     const vector<Blob<Dtype>*>& result =
         test_net->Forward(bottom_vec, &iter_loss);
     if (param_.test_compute_loss()) {
       loss += iter_loss;
     }
+    /*
     if (i == 0) {
       for (int j = 0; j < result.size(); ++j) {
         const Dtype* result_vec = result[j]->cpu_data();
@@ -391,11 +394,14 @@ void Solver<Dtype>::Test(const int test_net_id) {
         }
       }
     }
+    */
   }
   if (param_.test_compute_loss()) {
     loss /= param_.test_iter(test_net_id);
     LOG(INFO) << "Test loss: " << loss;
   }
+
+  /*
   double sum_mean_score = 0.0;
   for (int i = 0; i < test_score.size(); ++i) {
     const Dtype mean_score = test_score[i] / param_.test_iter(test_net_id);
@@ -412,6 +418,7 @@ void Solver<Dtype>::Test(const int test_net_id) {
   }
   LOG(INFO) << "    Test net output #" << 0 << ": " << output_name << " = "
       << sum_mean_score << loss_msg_stream.str();
+  */
 
   Caffe::set_phase(Caffe::TRAIN);
 }
