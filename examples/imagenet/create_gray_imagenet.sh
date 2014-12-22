@@ -42,9 +42,10 @@ GLOG_logtostderr=1 $TOOLS/convert_imageset \
     --resize_height=$RESIZE_HEIGHT \
     --resize_width=$RESIZE_WIDTH \
     --shuffle \
+    --gray \
     $TRAIN_DATA_ROOT \
     $DATA/train.txt \
-    $EXAMPLE/ilsvrc12_train_lmdb_cropped
+    $EXAMPLE/ilsvrc12_train_lmdb_gray_cropped
 
 echo "Creating val lmdb..."
 
@@ -52,8 +53,9 @@ GLOG_logtostderr=1 $TOOLS/convert_imageset \
     --resize_height=$RESIZE_HEIGHT \
     --resize_width=$RESIZE_WIDTH \
     --shuffle \
+    --gray \
     $VAL_DATA_ROOT \
     $DATA/val.txt \
-    $EXAMPLE/ilsvrc12_val_lmdb_cropped
+    $EXAMPLE/ilsvrc12_val_lmdb_gray_cropped
 
 echo "Done."
