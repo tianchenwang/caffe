@@ -28,6 +28,7 @@
 
 # build, distribute, and bins
 build
+debug
 .build_debug/*
 .build_release/*
 distribute/*
