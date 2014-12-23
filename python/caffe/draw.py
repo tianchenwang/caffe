@@ -56,7 +56,7 @@ def get_pydot_graph(caffe_net):
         pydot.Edge(pydot_nodes[edge[0]], pydot_nodes[edge[1]]))
   return pydot_graph
 
-def draw_net(caffe_net, ext='png'):
+def draw_net(caffe_net, ext='pdf'):
   """Draws a caffe net and returns the image string encoded using the given
   extension.
 
