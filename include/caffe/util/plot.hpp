@@ -4,7 +4,7 @@
 #include <opencv2/highgui/highgui.hpp>
 #include <opencv2/highgui/highgui_c.h>
 #include <opencv2/imgproc/imgproc.hpp>
-
+#include <cmath>
 namespace caffe {
 cv::Scalar dist2color(double dist, double max_dist = 90.0);
 
@@ -18,6 +18,7 @@ void drawResults(cv::Mat& image, const Dtype* pix_label, const Dtype* reg_label,
       int label_width = quad_width*grid_dim;
       int img_width = image.cols;
       int img_height = image.rows;
+      double thresh=0.4;
       // retrieve labels and predictions 
       for (int z=0; z<grid_length;++z){
         for (int qy = 0; qy < quad_height; ++qy) {
@@ -27,17 +28,17 @@ void drawResults(cv::Mat& image, const Dtype* pix_label, const Dtype* reg_label,
             int x = qx*grid_dim+dx;
             int y = qy*grid_dim+dy;
             double label_prob = (double)(*(pix_label+((z*quad_height+qy)*quad_width+qx)));
-            if (*(pix_label+((z*quad_height+qy)*quad_width+qx)) <0.5) {
-            // pixel label is 0, do nothing
-            } else{
-              // draw pixel label/pred
-              double x1 = x-0.5<0? 0:x-0.5;
-              double y1 = y-0.5<0? 0:y-0.5;
-              double w = scaling - (x<0.5? 0.5-x:0) - (x1+scaling>img_width? x1+scaling-img_width:0);
-              double h = scaling - (y<0.5? 0.5-y:0) - (y1+scaling>img_height? y1+scaling-img_height:0);
-              cv::Mat roi = image(cv::Rect(x1*scaling, y1*scaling, w, h));
-              cv::Mat color(roi.size(), CV_32FC3, cv::Scalar(0, 255, 0)); 
-              cv::addWeighted(color, label_prob, roi, 1.0 - label_prob , 0.0, roi); 
+            label_prob = 1. / (1. + exp(-label_prob));
+            //std::cout<<label_prob<<" ";
+            // draw pixel label/pred
+            double x1 = x-0.5<0? 0:x-0.5;
+            double y1 = y-0.5<0? 0:y-0.5;
+            double w = scaling - (x<0.5? 0.5-x:0) - (x1+scaling>img_width? x1+scaling-img_width:0);
+            double h = scaling - (y<0.5? 0.5-y:0) - (y1+scaling>img_height? y1+scaling-img_height:0);
+            cv::Mat roi = image(cv::Rect(x1*scaling, y1*scaling, w, h));
+            cv::Mat color(roi.size(), CV_32FC3, cv::Scalar(0, 255, 0)); 
+            cv::addWeighted(color, label_prob, roi, 1.0 - label_prob , 0.0, roi); 
+            if (label_prob > thresh) {
 
               // draw reg label/pred
               Dtype x_adj = (qx*grid_dim + grid_dim / 2) * scaling;

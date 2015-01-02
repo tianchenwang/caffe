@@ -93,7 +93,8 @@ int train() {
       && solver_param.solver_mode() == caffe::SolverParameter_SolverMode_GPU) {
     FLAGS_gpu = solver_param.device_id();
   }
-
+  // assuming 4 gpus per machine. assign each rank to a different gpu.
+  FLAGS_gpu = (FLAGS_gpu + caffe::mpiRank(MPI_COMM_WORLD))%4;
   // Set device id and mode
   if (FLAGS_gpu >= 0) {
     LOG(INFO) << "Use GPU with device ID " << FLAGS_gpu;
@@ -150,8 +151,10 @@ int test() {
   float loss = 0;
   for (int i = 0; i < FLAGS_iterations; ++i) {
     float iter_loss;
+    LOG(INFO)<<"HERERER1";
     const vector<Blob<float>*>& result =
         caffe_net.Forward(bottom_vec, &iter_loss);
+    LOG(INFO)<<"HERERER2";
     loss += iter_loss;
     int idx = 0;
     for (int j = 0; j < result.size(); ++j) {
@@ -279,6 +282,7 @@ int main(int argc, char** argv) {
       "  time            benchmark model execution time");
   // Run tool or show usage.
   caffe::GlobalInit(&argc, &argv);
+  caffe::mpiInit();
   if (argc == 2) {
     return GetBrewFunction(caffe::string(argv[1]))();
   } else {

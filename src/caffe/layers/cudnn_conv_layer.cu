@@ -6,7 +6,6 @@
 #include "caffe/util/im2col.hpp"
 #include "caffe/util/math_functions.hpp"
 #include "caffe/vision_layers.hpp"
-
 namespace caffe {
 
 __global__ void sync_conv_groups() { }
@@ -14,10 +13,42 @@ __global__ void sync_conv_groups() { }
 template <typename Dtype>
 void CuDNNConvolutionLayer<Dtype>::Forward_gpu(
     const vector<Blob<Dtype>*>& bottom, vector<Blob<Dtype>*>* top) {
+    //Blob<Dtype> *temp = new Blob<Dtype>(this->blobs_[0]->num(), this->blobs_[0]->channels(), this->blobs_[0]->height(), this->blobs_[0]->width());
   for (int i = 0; i < bottom.size(); ++i) {
     const Dtype* bottom_data = bottom[i]->gpu_data();
     Dtype* top_data = (*top)[i]->mutable_gpu_data();
     const Dtype* weight = this->blobs_[0]->gpu_data();
+    /*//Dtype* weight_cpu = this->blobs_[0]->mutable_cpu_data();
+   //LOG(INFO) << "weight " << temp->num()<<" "<<temp->channels()<<" "<<temp->height()<<" "<<temp->width()<<" "<<temp->count();
+   //Dtype* temp_data = temp->mutable_gpu_data();
+    //LOG(INFO) << "weight " << this->blobs_[0]->num()<<" "<<this->blobs_[0]->channels()<<" "<<this->blobs_[0]->height()<<" "<<this->blobs_[0]->width()<<" "<<this->blobs_[0]->count();
+    
+    // Sum across all nodes.
+    if(sizeof(Dtype)==4) //float
+      Allreduce((void*)weight_cpu, (void*)weight_cpu, this->blobs_[0]->count(), MPI_FLOAT, MPI_SUM, MPI_COMM_WORLD);
+    else if(sizeof(Dtype)==8) // double
+      Allreduce((void*)weight_cpu, (void*)weight_cpu, this->blobs_[0]->count(), MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+    else
+      LOG(FATAL)<<"Unsupported data type!";
+
+    Dtype* weight_gpu = this->blobs_[0]->mutable_gpu_data();
+    caffe_gpu_scale(this->blobs_[0]->count(), (Dtype)(1.0/mpiSize(MPI_COMM_WORLD)), weight_gpu, weight_gpu); 
+    
+   //Allgather((void*)weight, this->blobs_[0]->count(), MPI_FLOAT, (void*)temp_data, this->blobs_[0]->count(), MPI_FLOAT, MPI_COMM_WORLD);
+    if (mpiRank(MPI_COMM_WORLD)%2==1) {
+      //LOG(INFO)<<"Rank "<<mpiRank(MPI_COMM_WORLD)<<" sending!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!1";
+      Send((void*)weight, this->blobs_[0]->count(), MPI_FLOAT, mpiRank(MPI_COMM_WORLD)-1, 0, MPI_COMM_WORLD);
+    } else {
+      //LOG(INFO)<<"Rank "<<mpiRank(MPI_COMM_WORLD)<<" receiving!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!1";
+      Recv((void*)temp_data, this->blobs_[0]->count(), MPI_FLOAT, mpiRank(MPI_COMM_WORLD)+1, 0, MPI_COMM_WORLD);
+    }
+    if (mpiRank(MPI_COMM_WORLD)%2==0) {
+      //LOG(INFO)<<"Rank "<<mpiRank(MPI_COMM_WORLD)<<" sending!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!2";
+      Send((void*)weight, this->blobs_[0]->count(), MPI_FLOAT, mpiRank(MPI_COMM_WORLD)+1, 0, MPI_COMM_WORLD);
+    } else {
+      //LOG(INFO)<<"Rank "<<mpiRank(MPI_COMM_WORLD)<<" receiving!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!2";
+      Recv((void*)temp_data, this->blobs_[0]->count(), MPI_FLOAT, mpiRank(MPI_COMM_WORLD)-1, 0, MPI_COMM_WORLD);
+    }*/
 
     // Forward through cuDNN in parallel over groups.
     for (int g = 0; g < this->group_; g++) {
@@ -44,6 +75,7 @@ void CuDNNConvolutionLayer<Dtype>::Forward_gpu(
     // NOLINT_NEXT_LINE(whitespace/operators)
     sync_conv_groups<<<1, 1>>>();
   }
+  //delete temp;
 }
 
 template <typename Dtype>
@@ -76,6 +108,7 @@ void CuDNNConvolutionLayer<Dtype>::Backward_gpu(const vector<Blob<Dtype>*>& top,
       // Gradient w.r.t. weights.
       if (this->param_propagate_down_[0]) {
         const Dtype* bottom_data = (*bottom)[i]->gpu_data();
+        //LOG(INFO) << "grad " << (*bottom)[i]->num()<<" "<<(*bottom)[i]->channels()<<" "<<(*bottom)[i]->height()<<" "<<(*bottom)[i]->width()<<" "<<(*bottom)[i]->count();
         CUDNN_CHECK(cudnnConvolutionBackwardFilter(handle_[1*this->group_ + g],
             bottom_descs_[i], bottom_data + bottom_offset_ * g,
             top_descs_[i],    top_diff + top_offset_ * g,

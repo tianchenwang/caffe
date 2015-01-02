@@ -13,7 +13,6 @@
 #include "caffe/util/io.hpp"
 #include "caffe/util/math_functions.hpp"
 #include "caffe/util/upgrade_proto.hpp"
-
 #include "caffe/test/test_caffe_main.hpp"
 
 namespace caffe {
@@ -746,7 +745,7 @@ void Net<Dtype>::ToProto(NetParameter* param, bool write_diff) {
 }
 
 template <typename Dtype>
-void Net<Dtype>::Update() {
+void Net<Dtype>::Update(bool syncParams=false) {
   // First, accumulate the diffs of any shared parameters into their owner's
   // diff. (Assumes that the learning rate, weight decay, etc. have already been
   // accounted for in the current diff.)
@@ -780,6 +779,8 @@ void Net<Dtype>::Update() {
     if (param_owners_[i] >= 0) { continue; }
     if (debug_info_) { UpdateDebugInfo(i); }
     params_[i]->Update();
+    if (syncParams)
+      params_[i]->SyncData();
   }
 }
 

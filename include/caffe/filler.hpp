@@ -12,6 +12,7 @@
 #include "caffe/proto/caffe.pb.h"
 #include "caffe/syncedmem.hpp"
 #include "caffe/util/math_functions.hpp"
+#include "caffe/util/mpi.hpp"
 
 namespace caffe {
 
@@ -58,6 +59,21 @@ class UniformFiller : public Filler<Dtype> {
         Dtype(this->filler_param_.max()), blob->mutable_cpu_data());
     CHECK_EQ(this->filler_param_.sparse(), -1)
          << "Sparsity not supported by this Filler.";
+    if(mpiSize(MPI_COMM_WORLD)>0)
+    {
+      MPI_Datatype mpiDataType;
+      switch (sizeof(Dtype)) {
+        case 4:  // float
+          mpiDataType = MPI_FLOAT;
+          break;
+        case 8:  // double
+          mpiDataType = MPI_DOUBLE;
+          break;
+        default:
+          LOG(FATAL)<<"Unsupported data type!";
+      }
+      Bcast(static_cast<void*>(blob->mutable_cpu_data()), blob->count(), mpiDataType, 0, MPI_COMM_WORLD);
+    }
   }
 };
 
@@ -89,6 +105,21 @@ class GaussianFiller : public Filler<Dtype> {
       for (int i = 0; i < blob->count(); ++i) {
         data[i] *= mask[i];
       }
+    }
+    if(mpiSize(MPI_COMM_WORLD)>0)
+    {
+      MPI_Datatype mpiDataType;
+      switch (sizeof(Dtype)) {
+        case 4:  // float
+          mpiDataType = MPI_FLOAT;
+          break;
+        case 8:  // double
+          mpiDataType = MPI_DOUBLE;
+          break;
+        default:
+          LOG(FATAL)<<"Unsupported data type!";
+      }
+      Bcast(static_cast<void*>(blob->mutable_cpu_data()), blob->count(), mpiDataType, 0, MPI_COMM_WORLD);
     }
   }
 
@@ -123,6 +154,21 @@ class PositiveUnitballFiller : public Filler<Dtype> {
     }
     CHECK_EQ(this->filler_param_.sparse(), -1)
          << "Sparsity not supported by this Filler.";
+    if(mpiSize(MPI_COMM_WORLD)>0)
+    {
+      MPI_Datatype mpiDataType;
+      switch (sizeof(Dtype)) {
+        case 4:  // float
+          mpiDataType = MPI_FLOAT;
+          break;
+        case 8:  // double
+          mpiDataType = MPI_DOUBLE;
+          break;
+        default:
+          LOG(FATAL)<<"Unsupported data type!";
+      }
+      Bcast(static_cast<void*>(blob->mutable_cpu_data()), blob->count(), mpiDataType, 0, MPI_COMM_WORLD);
+    }
   }
 };
 
@@ -154,6 +200,21 @@ class XavierFiller : public Filler<Dtype> {
         blob->mutable_cpu_data());
     CHECK_EQ(this->filler_param_.sparse(), -1)
          << "Sparsity not supported by this Filler.";
+    if(mpiSize(MPI_COMM_WORLD)>0)
+    {
+      MPI_Datatype mpiDataType;
+      switch (sizeof(Dtype)) {
+        case 4:  // float
+          mpiDataType = MPI_FLOAT;
+          break;
+        case 8:  // double
+          mpiDataType = MPI_DOUBLE;
+          break;
+        default:
+          LOG(FATAL)<<"Unsupported data type!";
+      }
+      Bcast(static_cast<void*>(blob->mutable_cpu_data()), blob->count(), mpiDataType, 0, MPI_COMM_WORLD);
+    }
   }
 };
 

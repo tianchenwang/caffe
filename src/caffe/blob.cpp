@@ -2,7 +2,10 @@
 #include "caffe/common.hpp"
 #include "caffe/syncedmem.hpp"
 #include "caffe/util/math_functions.hpp"
-
+#include "caffe/util/mpi.hpp"
+#include <iostream>
+#include <fstream>
+#include <sstream>
 namespace caffe {
 
 template <typename Dtype>
@@ -103,6 +106,7 @@ void Blob<Dtype>::ShareDiff(const Blob& other) {
   diff_ = other.diff();
 }
 
+
 // The "update" method is used for parameter blobs in a Net, which are stored
 // as Blob<float> or Blob<double> -- hence we do not define it for
 // Blob<int> or Blob<unsigned int>.
@@ -111,6 +115,8 @@ template <> void Blob<int>::Update() { NOT_IMPLEMENTED; }
 
 template <typename Dtype>
 void Blob<Dtype>::Update() {
+  // synch gradients across mpi nodes.
+  SyncDiff();
   // We will perform update based on where the data is located.
   switch (data_->head()) {
   case SyncedMemory::HEAD_AT_CPU:
@@ -126,6 +132,121 @@ void Blob<Dtype>::Update() {
     caffe_gpu_axpy<Dtype>(count_, Dtype(-1),
         static_cast<const Dtype*>(diff_->gpu_data()),
         static_cast<Dtype*>(data_->mutable_gpu_data()));
+#else
+    NO_GPU;
+#endif
+    break;
+  default:
+    LOG(FATAL) << "Syncedmem not initialized.";
+  }
+}
+
+
+// The "syncdata" method is used for parameter blobs in a Net, which are stored
+// as Blob<float> or Blob<double> -- hence we do not define it for
+// Blob<int> or Blob<unsigned int>.
+template <> void Blob<unsigned int>::SyncData() { NOT_IMPLEMENTED; }
+template <> void Blob<int>::SyncData() { NOT_IMPLEMENTED; }
+
+template <typename Dtype>
+void Blob<Dtype>::SyncData() {
+  // Sum data across all mpi nodes if there're more than 1 node running.
+  if (mpiSize(MPI_COMM_WORLD)>1){
+    void* data_cpu = data_->mutable_cpu_data();
+    MPI_Datatype mpiDataType;
+    switch (sizeof(Dtype)) {
+      case 4:  // float
+        mpiDataType = MPI_FLOAT;
+        break;
+      case 8:  // double
+        mpiDataType = MPI_DOUBLE;
+        break;
+      default:
+        LOG(FATAL)<<"Unsupported data type!";
+    }
+    //std::ostringstream stringStream;
+    //stringStream <<"/deep/group/driving_data/twangcat/caffe_models/mpilog_rank"<<mpiRank(MPI_COMM_WORLD);
+    //std::string save_name = stringStream.str();
+    //std::ofstream myfile (save_name.c_str(),ios::app);
+    //myfile<<"Rank "<<mpiRank(MPI_COMM_WORLD)<<"syncing weights... ";
+    Allreduce(data_cpu, data_cpu, count_, mpiDataType, MPI_SUM, MPI_COMM_WORLD);
+    //myfile<<"Rank "<<mpiRank(MPI_COMM_WORLD)<<"syncing weights done"<<std::endl;
+    //myfile.close();
+  }
+  // We will perform update based on where the data is located.
+  switch (data_->head()) {
+  case SyncedMemory::HEAD_AT_CPU:
+    // take average of data from different nodes 
+    if (mpiSize(MPI_COMM_WORLD)>1)
+      caffe_cpu_scale(count_, (Dtype)(1.0/mpiSize(MPI_COMM_WORLD)),
+        static_cast<const Dtype*>(data_->cpu_data()),
+        static_cast<Dtype*>(data_->mutable_cpu_data()));
+    break;
+  case SyncedMemory::HEAD_AT_GPU:
+  case SyncedMemory::SYNCED:
+#ifndef CPU_ONLY
+    // take average of gradients from different nodes 
+    if (mpiSize(MPI_COMM_WORLD)>1)
+      caffe_gpu_scale(count_, (Dtype)(1.0/mpiSize(MPI_COMM_WORLD)),
+        static_cast<const Dtype*>(data_->gpu_data()),
+        static_cast<Dtype*>(data_->mutable_gpu_data()));
+#else
+    NO_GPU;
+#endif
+    break;
+  default:
+    LOG(FATAL) << "Syncedmem not initialized.";
+  }
+}
+
+// The "syncdiff" method is used for parameter blobs in a Net, which are stored
+// as Blob<float> or Blob<double> -- hence we do not define it for
+// Blob<int> or Blob<unsigned int>.
+template <> void Blob<unsigned int>::SyncDiff() { NOT_IMPLEMENTED; }
+template <> void Blob<int>::SyncDiff() { NOT_IMPLEMENTED; }
+
+template <typename Dtype>
+void Blob<Dtype>::SyncDiff() {
+  // Sum gradient across all mpi nodes if there're more than 1 node running.
+  if (mpiSize(MPI_COMM_WORLD)>1){
+    void* diff_cpu = diff_->mutable_cpu_data();
+    MPI_Datatype mpiDataType;
+    switch (sizeof(Dtype)) {
+      case 4:  // float
+        mpiDataType = MPI_FLOAT;
+        break;
+      case 8:  // double
+        mpiDataType = MPI_DOUBLE;
+        break;
+      default:
+        LOG(FATAL)<<"Unsupported data type!";
+    }
+    //std::ostringstream stringStream;
+    //stringStream <<"/deep/group/driving_data/twangcat/caffe_models/mpilog_rank"<<mpiRank(MPI_COMM_WORLD);
+    //std::string save_name = stringStream.str();
+    //std::ofstream myfile (save_name.c_str(),ios::app);
+    //myfile<<"Rank "<<mpiRank(MPI_COMM_WORLD)<<"syncing gradients... ";
+    Allreduce(diff_cpu, diff_cpu, count_, mpiDataType, MPI_SUM, MPI_COMM_WORLD);
+    //myfile<<"Rank "<<mpiRank(MPI_COMM_WORLD)<<"syncing gradients done"<<std::endl;
+    //myfile.close();
+  }
+  // We will perform update based on where the diff is located.
+  switch (diff_->head()) {
+  case SyncedMemory::HEAD_AT_CPU:
+    // take average of gradients from different nodes 
+    if (mpiSize(MPI_COMM_WORLD)>1)
+      caffe_cpu_scale(count_, (Dtype)(1.0/mpiSize(MPI_COMM_WORLD)),
+        static_cast<const Dtype*>(diff_->cpu_data()),
+        static_cast<Dtype*>(diff_->mutable_cpu_data()));
+    break;
+  case SyncedMemory::HEAD_AT_GPU:
+  case SyncedMemory::SYNCED:
+#ifndef CPU_ONLY
+    // take average of gradients from different nodes 
+    if (mpiSize(MPI_COMM_WORLD)>1)
+      caffe_gpu_scale(count_, (Dtype)(1.0/mpiSize(MPI_COMM_WORLD)),
+        static_cast<const Dtype*>(diff_->gpu_data()),
+        static_cast<Dtype*>(diff_->mutable_gpu_data()));
 #else
     NO_GPU;
 #endif

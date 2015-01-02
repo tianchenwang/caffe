@@ -9,11 +9,12 @@
 #include "caffe/util/io.hpp"
 #include "caffe/util/math_functions.hpp"
 #include "caffe/util/rng.hpp"
+#include "caffe/util/mpi.hpp"
 #include <boost/algorithm/string.hpp>
-#include <boost/python.hpp>
-#include <boost/numpy.hpp>
-namespace py = boost::python; // create namespace variable for boost::python  
-namespace np = boost::numpy; // create namespace variable for boost::python  
+//#include <boost/python.hpp>
+//#include <boost/numpy.hpp>
+//namespace py = boost::python; // create namespace variable for boost::python  
+//namespace np = boost::numpy; // create namespace variable for boost::python  
 namespace caffe {
 
 template <typename Dtype>
@@ -188,14 +189,14 @@ void VideoDataLayer<Dtype>::DataLayerSetUp(const vector<Blob<Dtype>*>& bottom,
   }
   LOG(INFO) << "A total of " << lines_.size() << " batches.";
 
-  lines_id_ = 0;
+  lines_id_ = mpiRank(MPI_COMM_WORLD);
   // Check if we would need to randomly skip a few data points
   if (this->layer_param_.video_data_param().rand_skip()) {
-    unsigned int skip = caffe_rng_rand() %
-        this->layer_param_.video_data_param().rand_skip();
+    //unsigned int skip = caffe_rng_rand() % this->layer_param_.video_data_param().rand_skip();
+    unsigned int skip = this->layer_param_.video_data_param().rand_skip();
     LOG(INFO) << "Skipping first " << skip << " data points.";
     CHECK_GT(lines_.size(), skip) << "Not enough points to skip";
-    lines_id_ = skip;
+    lines_id_ = skip + mpiRank(MPI_COMM_WORLD);
   }
   // Read a data batch, and use it to initialize the top blob.
   this->cap = new cv::VideoCapture(lines_[lines_id_].first);
@@ -257,7 +258,7 @@ void VideoDataLayer<Dtype>::InternalThreadEntry() {
   std::vector<size_t> trans = lines_[lines_id_].second.second;
   if (batch_size!=frameIds.size() || batch_size!=trans.size())
     LOG(ERROR)<<"Frame count mismatch!";
-  LOG(INFO)<<"reading video file "<<filename;
+  //LOG(INFO)<<"Rank "<<mpiRank(MPI_COMM_WORLD)<<"/"<<mpiSize(MPI_COMM_WORLD)<<": reading video file "<<filename;
   this->cap = new cv::VideoCapture(filename);
   for (int item_id = 0; item_id < batch_size; ++item_id) {
     // get a blob
@@ -272,16 +273,17 @@ void VideoDataLayer<Dtype>::InternalThreadEntry() {
     this->data_transformer_.Transform(item_id, datum, this->mean_, top_data);
     // go to the next iter
   }
-  lines_id_++;
+  lines_id_+=mpiSize(MPI_COMM_WORLD);
   if (lines_id_ >= lines_size) {
     // We have reached the end. Restart from the first.
     DLOG(INFO) << "Restarting data prefetching from start.";
-    lines_id_ = 0;
+    lines_id_ = mpiRank(MPI_COMM_WORLD);
     if (this->layer_param_.image_data_param().shuffle()) {
       ShuffleBatches();
     }
   }
   this->cap->release();
+  //LOG(INFO)<<"video reading done! ";
 }
 
 INSTANTIATE_CLASS(VideoDataLayer);

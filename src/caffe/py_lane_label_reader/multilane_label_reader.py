@@ -1,26 +1,19 @@
 from numpy import array, dot, zeros, around, divide, ones
 import cv,cv2
 from transformations import euler_matrix
-from copy import deepcopy
-import collections
-import os
 import numpy as np
 import logging
-from threading import Thread
-from Queue import Queue
 import pickle
+import string
+import os
+import time
 from GPSReader import GPSReader
 from GPSTransforms import *
 from GPSReprojection import *
 from WarpUtils import warpPoints
 from Q50_config import *
 from ArgParser import *
-from scipy.io import loadmat
-import string
-import time
 from SetPerspDist import setPersp
-import os
-import time
 __all__=['MultilaneLabelReader']
 
 
@@ -55,15 +48,19 @@ def colorful_line(img, start, end, start_color, end_color, thickness):
 
 
 class MultilaneLabelReader():
-    def __init__(self, predict_depth = True, imdepth=3, imwidth=640, imheight=480, markingWidth=0.07, distortion_file='/scail/group/deeplearning/driving_data/perspective_transforms.pickle', pixShift=0, label_dim = [80,60], new_distort=False, readVideo=False):
+    def __init__(self, rank, predict_depth = True, batchSize = 48, imdepth=3, imwidth=640, imheight=480, markingWidth=0.07, distortion_file='/scail/group/deeplearning/driving_data/perspective_transforms.pickle', pixShift=0, label_dim = [80,60], new_distort=False, readVideo=False):
       self.new_distort = new_distort
       if new_distort:
         self.Ps = setPersp()
       else:
         self.Ps = pickle.load(open(distortion_file, 'rb'))
+      self.rank = rank
       self.lane_values = dict()
-      self.gps_values1 = dict()
-      self.gps_values2 = dict()
+      self.gps_data1 = dict()
+      self.gps_times1 = dict()
+      self.gps_times2 = dict()
+      self.laneVisible = dict()
+      self.tr1 = dict()
       self.count=0
       self.markingWidth = markingWidth
       self.pixShift = pixShift
@@ -83,7 +80,20 @@ class MultilaneLabelReader():
       self.x_adj = (np.floor(np.arange(label_dim[0])/self.griddim)*self.griddim+self.griddim/2)*imwidth/label_dim[0]
       self.y_adj = (np.floor(np.arange(label_dim[1])/self.griddim)*self.griddim+self.griddim/2)*imheight/label_dim[1]
       self.y_adj = np.array([self.y_adj]).transpose()
-
+      self.labels= np.zeros([batchSize,self.labelh, self.labelw,1],dtype='f4',order='C')
+      self.reg_labels= np.zeros([batchSize, self.labelh, self.labelw,self.labeld],dtype='f4',order='C')
+      self.weight_labels= np.ones([batchSize, self.labelh, self.labelw,1],dtype='f4',order='C')
+      self.time1 = 0
+      self.time2 = 0
+      self.timer_cnt = 1
+      
+      '''
+      lane_filename = '/scail/group/deeplearning/driving_data/640x480_Q50/4-3-14-gilroy/from_gilroy_c_multilane_points_planar_done'+str(self.rank)+'.pickle'
+      lfid = open(lane_filename,'rb')
+      self.lanes = pickle.load(lfid)
+      lfid.close()
+      #self.lanes = np.load(lane_filename)
+      '''
     def zDistances(self, distances, global_frame, starting_point, meters_per_point, points_fwd):
         output = []
         point_num = 1
@@ -124,7 +134,7 @@ class MultilaneLabelReader():
           
         
 
-    def runBatch(self, vid_name, gps_dat, gps_times1, gps_times2, frames, start_frame, final_frame, lanes, tr1,Pid, split_num, cam_num, params):
+    def runBatch(self, vid_name, gps_filename1, gps_dat, gps_times1, gps_times2, frames, lanes, tr1,Pid, split_num, cam_num, params):
         if self.visualize:
           print 'warning: reading videos in labeller...'
           cap = cv2.VideoCapture(vid_name)
@@ -141,16 +151,16 @@ class MultilaneLabelReader():
         scan_range = starting_point + (points_fwd-1)*meters_per_point
         seconds_ahead=5
         output_num = 0
-        batchSize = frames.shape[0]
-        labels= np.zeros([batchSize,self.labelh, self.labelw,1],dtype='f4',order='C')
-        reg_labels= np.zeros([batchSize, self.labelh, self.labelw,self.labeld],dtype='f4',order='C')
-        weight_labels= np.ones([batchSize, self.labelh, self.labelw,1],dtype='f4',order='C')
-        
+        batchSize = frames.shape[0] 
         labels_3d= []
         trajectory_3d= []
         count = 0
-        #print 'reading labels... ',
-        labelling_time=0
+        fid = open('/deep/group/driving_data/twangcat/caffe_models/pylog_rank'+str(self.rank), 'a')
+        fid.write('reading '+vid_name+'\n')
+        time2 = 0
+        computed_lanes = 0
+        if gps_filename1 not in self.laneVisible:
+          self.laneVisible[gps_filename1]=np.ones([tr1.shape[0],lanes['num_lanes']], dtype='bool')
         for idx in xrange(batchSize):
             frame = frames[idx]
             fnum2 =frame*10+split_num-1 # global video frame. if split0, *10+9; if split1, *10+0; if split 2, *10+1 .... if split9, *10+8
@@ -165,9 +175,6 @@ class MultilaneLabelReader():
             else:
               T = np.eye(4)
               P = self.Ps[Pid[idx]]
-            if frame < start_frame or (final_frame != -1 and frame >= final_frame):
-                continue
-
             # car trajectory in current camera frame
             local_pts = MapPos(tr1[fnum1:fnum1+290,0:3,3], tr1[fnum1,:,:], cam, T_from_i_to_l)
             local_pts[1,:]+=lidar_height # subtract height to get point on ground
@@ -179,7 +186,6 @@ class MultilaneLabelReader():
             ids = range(ids[0], ids[-1]+1)
             # ids for computing lateral ordering of lanes.
             anchor_ids = (self.zDistances(local_pts[2,:], fnum2, starting_point2, meters_per_point2, points_fwd2))
-
             velocities = gps_dat[anchor_ids,4:7]
             velocities[:,[0, 1]] = velocities[:,[1, 0]]
             vel_start = ENU2IMUQ50(np.transpose(velocities), gps_dat[0,:])
@@ -189,16 +195,23 @@ class MultilaneLabelReader():
             sideways_curr = np.transpose(MapVec( sideways_start, tr1[fnum1,:,:], cam, T_from_i_to_l))
             center = MapPosTrajectory(tr1[ids,:,:], tr1[fnum1,:,:], cam, T_from_i_to_l,height=lidar_height)
             center2 = MapPosTrajectory(tr1[anchor_ids,:,:], tr1[fnum1,:,:], cam, T_from_i_to_l,height=lidar_height)
-            temp_label = np.zeros([self.labelh, self.labelw])
+            fid.write('frame num '+str(idx)+' herere1\n')
+            temp_label = np.zeros([self.labelh, self.labelw], dtype='f4',order='C')
             if self.predict_depth:
-              temp_reg1 = np.zeros([self.labelh, self.labelw, self.labeld/2],dtype='f4')
-              temp_reg2 = np.zeros([self.labelh, self.labelw, self.labeld/2],dtype='f4')
+              temp_reg1 = np.zeros([self.labelh, self.labelw, self.labeld/2],dtype='f4',order='C')
+              temp_reg2 = np.zeros([self.labelh, self.labelw, self.labeld/2],dtype='f4',order='C')
             else:
-              temp_reg = np.zeros([self.labelh, self.labelw, self.labeld],dtype='f4')
-            temp_weight = np.ones([self.labelh, self.labelw, 1],dtype='f4')
+              temp_reg = np.zeros([self.labelh, self.labelw, self.labeld],dtype='f4',order='C')
+            temp_weight = np.ones([self.labelh, self.labelw, 1],dtype='f4',order='C')
             Lane3d = {'pts':[],'id':[],'anchors':np.empty([0,5])}
             Trajectory = {'center':center2,'sideways':sideways_curr}
             for l in range(lanes['num_lanes']):
+              time0 = time.time()
+              if not self.laneVisible[gps_filename1][fnum1, l]:
+                # already know this lane is not visible at this frame. just skip.
+                continue
+              fid.write('frame num '+str(idx)+' lane num '+str(l)+'\n')
+              computed_lanes+=1
               lane_key = 'lane'+str(l)
               lane = lanes[lane_key]
               # find the appropriate portion on the lane (close to the position of car, in front of camera, etc)
@@ -207,7 +220,9 @@ class MultilaneLabelReader():
               dist_far = np.sum((lane-tr1[ids[-1],0:3,3])**2, axis=1) # find distances of lane to current 'far' position.
               dist_self = np.sum((lane-tr1[fnum1,0:3,3])**2, axis=1) # find distances of lane to current self position.
               dist_mask = np.where(dist_self<=(scan_range**2))[0]# only consider points to be valid within scan_range from the 'near' position
+              time2 += time.time()-time0
               if len(dist_mask)==0:
+                self.laneVisible[gps_filename1][fnum1, l]=False
                 continue
               nearid = np.argmin(dist_near[dist_mask]) # for those valid points, find the one closet to 'near' position.
               farid = np.argmin(dist_far[dist_mask])  #and far position
@@ -234,11 +249,13 @@ class MultilaneLabelReader():
               #_, l_idx = np.unique(lu, return_index=True)
               #l_idx = np.sort(l_idx) 
               labelpix = (np.transpose(labelpix)).astype('i4')
+              fid.write('frame num '+str(idx)+' lane num '+str(l)+' ... ')
               # draw labels on temp masks
               if self.visualize: # if need to visualize, make the lines more colorful!
                 mask_color = l+1
               else:
                 mask_color=1
+              fid.write('0 ')
               for ii in range(1,imgpix.shape[1]-1):
                 ip = ii-1
                 ic = ii
@@ -246,6 +263,7 @@ class MultilaneLabelReader():
                 yp = labelpix[1,ip]
                 xc = labelpix[0,ic]
                 yc = labelpix[1,ic]
+                fid.write('1 ')
                
                 if np.abs(xp-xc)>1 or np.abs(yp-yc)>1:
                   x1 = xp
@@ -256,19 +274,23 @@ class MultilaneLabelReader():
                 x2 = xc
                 y2 = yc 
                 if yc>-1 and yc<self.labelh and xc>-1 and xc<self.labelw:# and np.abs(yp-yc)<5:
+                  fid.write('2 ')
                   # only update info for the first pt if nothing has been drawn for this grid. otherwise keep the first point and update the second point.
                   if temp_label[yc,xc]<1:
                     regx1 = imgpix[0,ip]
                     regy1 = imgpix[1,ip]
                     depth1 = depths[ip]
+                    fid.write('3 ')
                   else:
                     if self.predict_depth:
                       regx1 = float(temp_reg1[yc,xc,0])
                       regy1 = float(temp_reg1[yc,xc,1])
                       depth1 = float(temp_reg2[yc,xc,1])
+                      fid.write('4 ')
                     else:
                       regx1 = float(temp_reg[yc,xc,0])
                       regy1 = float(temp_reg[yc,xc,1])
+                  fid.write('5 ')
                   regx2 = imgpix[0,ii+1]
                   regy2 = imgpix[1,ii+1]
                   depth2 = depths[ii+1]
@@ -276,23 +298,26 @@ class MultilaneLabelReader():
                   if self.predict_depth:
                     cv2.line(temp_reg1, (x1,y1), (x2,y2) , [regx1, regy1, regx2], thickness=1 )
                     cv2.line(temp_reg2, (x1,y1), (x2,y2), [regy2, depth1, depth2], thickness=1 )
+                    fid.write('6 ')
                   else:
                     cv2.line(temp_reg, (x1,y1), (x2,y2) , [regx1,regy1,regx2,regy2], thickness=1 )
                   # draw mask label
                   cv2.line(temp_label, (x1, y1), (x2, y2), mask_color, thickness=1 )
+                  fid.write('7 ')
+              fid.write('\nframe num '+str(idx)+' lane num '+str(l)+' done\n')
             # fill temp masks into actual batch labels
-            labels[idx,:,:,0] = temp_label
+            self.labels[idx,:,:,0] = temp_label
             if self.predict_depth:
-              reg_labels[idx,:,:,0:3] = temp_reg1
-              reg_labels[idx,:,:,3:] = temp_reg2    
+              self.reg_labels[idx,:,:,0:3] = temp_reg1
+              self.reg_labels[idx,:,:,3:] = temp_reg2    
             else:
-              reg_labels[idx,:,:,:] = temp_reg    
-            weight_labels[idx,:,:,:] = temp_weight
+              self.reg_labels[idx,:,:,:] = temp_reg    
+            self.weight_labels[idx,:,:,:] = temp_weight
 
-            reg_labels[idx,:,:,0]-=self.x_adj
-            reg_labels[idx,:,:,2]-=self.x_adj
-            reg_labels[idx,:,:,1]-=self.y_adj
-            reg_labels[idx,:,:,3]-=self.y_adj
+            self.reg_labels[idx,:,:,0]-=self.x_adj
+            self.reg_labels[idx,:,:,2]-=self.x_adj
+            self.reg_labels[idx,:,:,1]-=self.y_adj
+            self.reg_labels[idx,:,:,3]-=self.y_adj
 
 
 
@@ -305,7 +330,7 @@ class MultilaneLabelReader():
               cap.set(cv.CV_CAP_PROP_POS_FRAMES, frame)
               success, img = cap.read()
               img = img.astype('f4')
-              reg_label = reg_labels[:,:,:,idx]
+              reg_label = self.reg_labels[:,:,:,idx]
               #cv2.putText(img, str(global_frame), (100,100), cv2.FONT_HERSHEY_PLAIN, 2.0, self.colors[0],thickness=2)
               for ii in xrange(temp_label.shape[0]):
                 for jj in xrange(temp_label.shape[1]):
@@ -323,18 +348,33 @@ class MultilaneLabelReader():
             self.count+=1
         # reshape a batch of label into the right format.
         # caffe does not support 'output block' sizes >1, so flatten it into the z dimension.
-        label_view = np.transpose(labels, [0,3,1,2]).reshape(batchSize, 1, self.labelh//self.griddim, self.griddim, self.labelw//self.griddim, self.griddim, order='C')
+        #print ' herere5'
+        fid.write('reshaping...')
+        label_view = np.transpose(self.labels, [0,3,1,2]).reshape(batchSize, 1, self.labelh//self.griddim, self.griddim, self.labelw//self.griddim, self.griddim, order='C')
         label_grid = np.transpose(label_view,[0,1,3,5,2,4]).reshape(batchSize, self.griddim*self.griddim,self.labelh//self.griddim,self.labelw//self.griddim, order='C')
-        reg_view = np.transpose(reg_labels, [0,3,1,2]).reshape(batchSize, self.labeld, self.labelh//self.griddim, self.griddim, self.labelw//self.griddim, self.griddim)
+        reg_view = np.transpose(self.reg_labels, [0,3,1,2]).reshape(batchSize, self.labeld, self.labelh//self.griddim, self.griddim, self.labelw//self.griddim, self.griddim)
         reg_grid = np.transpose(reg_view,[0,1,3,5,2,4]).reshape(batchSize, self.labeld*self.griddim*self.griddim,self.labelh//self.griddim,self.labelw//self.griddim)
         full_label = np.empty([batchSize, (self.griddim**2)*(self.labeld+1), self.labelh//self.griddim, self.labelw//self.griddim], dtype='f4',order='C')
         full_label[:,0:(self.griddim**2),:,:] = label_grid # binary mask label comes first along the z dimension
         full_label[:,(self.griddim**2):,:,:] = reg_grid  # followed by the regression labels for each channel.
+        #print 'time2: '+str(time2)
+        self.time2+=time2
+        if self.timer_cnt%1000==0:
+          #fid = open('caffe_python_time', 'a')
+          #fid.write('%d %d\n'%(self.time1/1000, self.time2/1000))
+          #fid.close()
+          self.time1 = 0
+          self.time2 = 0
+        self.timer_cnt+=1
+        fid.write('reshaping done\n')
+        fid.close()
         return full_label
 
 
 
     def runLabelling(self, f, frames, Pid): # filename, frame numbers, transformation ids
+
+        time1=0
         Pid = Pid.tolist()
         cam_num = int(f[-5])
         splitidx = string.index(f,'split_')
@@ -361,33 +401,40 @@ class MultilaneLabelReader():
         
         # gps_mark2 
         gps_filename2= args[gps_key2]
-        if not (gps_filename2 in self.gps_values2): # if haven't read this gps file before, cache it in dict.
-          gps_reader2 = GPSReader(gps_filename2)
-          self.gps_values2[gps_filename2] = gps_reader2.getNumericData()
-        gps_data2 = self.gps_values2[gps_filename2]
-        gps_times2 = utc_from_gps_log_all(gps_data2)
+        time0 = time.time()
     
+        if not (gps_filename2 in self.gps_times2): # if haven't read this gps file before, cache it in dict.
+          gps_reader2 = GPSReader(gps_filename2)
+          gps_data2 = gps_reader2.getNumericData()
+          self.gps_times2[gps_filename2] = utc_from_gps_log_all(gps_data2)
+        gps_times2 = self.gps_times2[gps_filename2]
         # gps_mark1
         gps_filename1= args[gps_key1]
-        if not (gps_filename1 in self.gps_values1): # if haven't read this gps file before, cache it in dict.
+        if not (gps_filename1 in self.gps_times1): # if haven't read this gps file before, cache it in dict.
           gps_reader1 = GPSReader(gps_filename1)
-          self.gps_values1[gps_filename1] = gps_reader1.getNumericData()
-        gps_data1 = self.gps_values1[gps_filename1]
-        tr1 = IMUTransforms(gps_data1)
-        gps_times1 = utc_from_gps_log_all(gps_data1)
+          self.gps_data1[gps_filename1] = gps_reader1.getNumericData()
+          self.tr1[gps_filename1]=IMUTransforms(self.gps_data1[gps_filename1])
+          self.gps_times1[gps_filename1] = utc_from_gps_log_all(self.gps_data1[gps_filename1])
+        gps_data1 = self.gps_data1[gps_filename1]
+        tr1 = self.tr1[gps_filename1]
+        gps_times1 =self.gps_times1[gps_filename1]
+        time1 += time.time()-time0
 
         prefix = gps_filename2[0:-postfix_len]
-        
-        #lane_filename = prefix+'_multilane_points_done.npz'
         lane_filename = prefix+'_multilane_points_planar_done.npz'
+        #lane_filename = '/scail/group/deeplearning/driving_data/640x480_Q50/4-3-14-gilroy/from_gilroy_c_multilane_points_planar_done'+str(self.rank)+'.npz'
         if not (lane_filename in self.lane_values):
           self.lane_values[lane_filename] = np.load(lane_filename)
         lanes = self.lane_values[lane_filename] # these values are alread pre-computed and saved, now just read it from dictionary
-
-        start_frame = 0 #frames to skip  #int(sys.argv[3]) if len(sys.argv) > 3 else 0
-        final_frame = -1  #int(sys.argv[4]) if len(sys.argv) > 4 else -1
-        return self.runBatch(f, gps_data1, gps_times1, gps_times2, frames, start_frame, final_frame, lanes, tr1, Pid, split_num, cam_num, params)
-
+        #lanes = np.load(lane_filename)
+        #lfid = open(lane_filename,'rb')
+        #lanes = pickle.load(lfid)
+        #lfid.close()
+        #print 'time1: '+str(time1)
+        self.time1+=time1
+        full_label = self.runBatch(f, gps_filename1, gps_data1, gps_times1, gps_times2, frames, lanes, tr1, Pid, split_num, cam_num, params)
+        #lanes.close()
+        return full_label
 
 
 if __name__ == '__main__':

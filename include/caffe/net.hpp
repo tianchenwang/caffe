@@ -83,7 +83,7 @@ class Net {
   }
 
   /// @brief Updates the network weights based on the diff values computed.
-  void Update();
+  void Update(bool syncParams);
 
   /**
    * @brief For an already initialized net, implicitly copies (i.e., using no

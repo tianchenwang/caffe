@@ -41,6 +41,7 @@ class GPSCovarianceReader():
                 record['ry'] = sqrt(float(tokens[offset + 4]))
                 record['rz'] = sqrt(float(tokens[offset + 8]))
                 self.data.append(record)
+        f.close()
 
     def getNumericData(self):
         arr = np.zeros([len(self.data), 6], np.float64);
@@ -74,6 +75,7 @@ class GPSReader():
         # Parse out the gps week
         record[self.token_order[10]] = long((tokens[9].split(';'))[1])
         self.data.append(record)
+    f.close()
 
   def getData(self):
     return self.data;

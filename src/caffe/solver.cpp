@@ -11,7 +11,7 @@
 #include "caffe/util/plot.hpp"
 #include "caffe/util/math_functions.hpp"
 #include "caffe/util/upgrade_proto.hpp"
-
+#include "caffe/util/mpi.hpp"
 
 #include <opencv2/core/core.hpp>
 #include <opencv2/highgui/highgui.hpp>
@@ -186,7 +186,7 @@ void Solver<Dtype>::Solve(const char* resume_file) {
   for (; iter_ < param_.max_iter(); ++iter_) {
     // Save a snapshot if needed.
     if (param_.snapshot() && iter_ > start_iter &&
-        iter_ % param_.snapshot() == 0) {
+        iter_ % param_.snapshot() == 0 && mpiRank(MPI_COMM_WORLD)==0) {
       Snapshot();
     }
 
@@ -196,16 +196,19 @@ void Solver<Dtype>::Solve(const char* resume_file) {
     //}
 
     const bool display = param_.display() && iter_ % param_.display() == 0;
+    //const bool display = true;
     net_->set_debug_info(display && param_.debug_info());
     Dtype loss = net_->ForwardBackward(bottom_vec);
     if (display) {
       LOG(INFO) << "Iteration " << iter_ << ", loss = " << loss;
       const vector<Blob<Dtype>*>& result = net_->output_blobs();
-      //added by Tao. To visualize the ground truth and predictions.
+      //Visualization code added by Tao.
       bool predict_depth = true;
       string img_str("data");
-      string pix_str("pixel-label");
-      string reg_str("bb-label");
+      //string pix_str("pixel-label");
+      //string reg_str("bb-label");
+      string pix_str("pixel-conv");
+      string reg_str("bb-output");
       // copy labels and predictions out
       const shared_ptr<Blob<Dtype> > img_blob = net_->blob_by_name(img_str);
       const shared_ptr<Blob<Dtype> > pix_blob = net_->blob_by_name(pix_str);
@@ -244,10 +247,10 @@ void Solver<Dtype>::Solve(const char* resume_file) {
       int num_regression=predict_depth ? 6:4;
       double scaling = 8.0; // ratio of image size to pix label size
       for(int n=0; n<batch_size; ++n){
-        int image_id = this->iter_*5+n;
+        int image_id = (this->iter_/param_.display())*batch_size+n;
         cv::Mat save_img = save_imgs[n];
         std::ostringstream stringStream;
-        stringStream <<save_dir<< "img"<<image_id<<".png";
+        stringStream <<save_dir<< "img"<<image_id<<"_"<<mpiRank(MPI_COMM_WORLD)<<".png";
         std::string save_name = stringStream.str();
         const Dtype* pix_label = pix_start+n*grid_length*quad_height*quad_width;
         const Dtype* reg_label = bb_start+n*num_regression*grid_length*quad_height*quad_width;
@@ -256,7 +259,7 @@ void Solver<Dtype>::Solve(const char* resume_file) {
                            quad_height, quad_width, grid_dim);
         cv::imwrite(save_name, save_img);
       }
-      //end
+      //end visualization code
       int score_index = 0;
       for (int j = 0; j < result.size(); ++j) {
         const Dtype* result_vec = result[j]->cpu_data();
@@ -280,11 +283,13 @@ void Solver<Dtype>::Solve(const char* resume_file) {
     }
 
     ComputeUpdateValue();
-    net_->Update();
+    int sync = param_.display();
+    bool syncParams = iter_ % sync == sync-1; // sync weight before saving snapshot
+    net_->Update(syncParams);
   }
   // Always save a snapshot after optimization, unless overridden by setting
   // snapshot_after_train := false.
-  if (param_.snapshot_after_train()) { Snapshot(); }
+  if (param_.snapshot_after_train() && mpiRank(MPI_COMM_WORLD)==0) { Snapshot(); }
   // After the optimization is done, run an additional train and test pass to
   // display the train and test loss/outputs if appropriate (based on the
   // display and test_interval settings, respectively).  Unlike in the rest of

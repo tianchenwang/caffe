@@ -2,6 +2,7 @@
 #include "caffe/layer.hpp"
 #include "caffe/proto/caffe.pb.h"
 #include "caffe/vision_layers.hpp"
+#include "caffe/multilane_label_layer.hpp"
 
 namespace caffe {
 

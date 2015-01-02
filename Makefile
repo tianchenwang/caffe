@@ -163,7 +163,7 @@ INCLUDE_DIRS += $(BUILD_INCLUDE_DIR) ./src ./include
 ifneq ($(CPU_ONLY), 1)
 	INCLUDE_DIRS += $(CUDA_INCLUDE_DIR)
 	LIBRARY_DIRS += $(CUDA_LIB_DIR)
-	LIBRARIES := cudart cublas curand
+	LIBRARIES := cudart cublas curand cuda
 endif
 LIBRARIES += pthread \
 	glog gflags protobuf leveldb snappy \
@@ -173,7 +173,10 @@ LIBRARIES += pthread \
 	boost_python \
 	boost_numpy \
 	hdf5_hl hdf5 \
-	opencv_core opencv_highgui opencv_imgproc
+	opencv_core opencv_highgui opencv_imgproc \
+    mpi mpi_cxx open-rte open-pal \
+    ibmad rdmacm ibumad ibverbs dl rt m
+#mpichcxx mpich opa mpl pthread 
 PYTHON_LIBRARIES := boost_python boost_numpy python2.7 opencv_core opencv_highgui opencv_imgproc
 WARNINGS := -Wall -Wno-sign-compare
 
