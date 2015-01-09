@@ -27,7 +27,7 @@ DEFINE_string(snapshot, "",
 DEFINE_string(weights, "",
     "Optional; the pretrained weights to initialize finetuning. "
     "Cannot be set simultaneously with snapshot.");
-DEFINE_int32(iterations, 50,
+DEFINE_int32(iterations, 5,
     "The number of iterations to run.");
 
 // A simple registry for caffe commands.
