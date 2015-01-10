@@ -690,9 +690,11 @@ void Net<Dtype>::Reshape() {
 template <typename Dtype>
 void Net<Dtype>::CopyTrainedLayersFrom(const NetParameter& param) {
   int num_source_layers = param.layers_size();
+  LOG(INFO) << "### COPYING MODEL";
   for (int i = 0; i < num_source_layers; ++i) {
     const LayerParameter& source_layer = param.layers(i);
     const string& source_layer_name = source_layer.name();
+    LOG(INFO) << source_layer_name;
     int target_layer_id = 0;
     while (target_layer_id != layer_names_.size() &&
         layer_names_[target_layer_id] != source_layer_name) {
@@ -707,12 +709,32 @@ void Net<Dtype>::CopyTrainedLayersFrom(const NetParameter& param) {
         layers_[target_layer_id]->blobs();
     CHECK_EQ(target_blobs.size(), source_layer.blobs_size())
         << "Incompatible number of blobs for layer " << source_layer_name;
+    LOG(INFO) << "### NAME: " << source_layer_name << " with "
+               << target_blobs.size() << " blobs";
     for (int j = 0; j < target_blobs.size(); ++j) {
+      LOG(INFO) << "### target NxCxHxW:  " << target_blobs[j]->num() << "x"
+                << target_blobs[j]->channels() << "x"
+                << target_blobs[j]->height() << "x"
+                << target_blobs[j]->width();
+      LOG(INFO) << "### source NxCxHxW:  " << source_layer.blobs(j).num() << "x"
+                << source_layer.blobs(j).channels() << "x"
+                << source_layer.blobs(j).height() << "x"
+                << source_layer.blobs(j).width();
       CHECK_EQ(target_blobs[j]->num(), source_layer.blobs(j).num());
       CHECK_EQ(target_blobs[j]->channels(), source_layer.blobs(j).channels());
       CHECK_EQ(target_blobs[j]->height(), source_layer.blobs(j).height());
-      CHECK_EQ(target_blobs[j]->width(), source_layer.blobs(j).width());
-      target_blobs[j]->FromProto(source_layer.blobs(j));
+      //CHECK_EQ(target_blobs[j]->width(), source_layer.blobs(j).width());
+      if (target_blobs[j]->width() == source_layer.blobs(j).width()) {
+        target_blobs[j]->FromProto(source_layer.blobs(j));
+      } else if (target_blobs[j]->width() > source_layer.blobs(j).width()) {
+        LOG(INFO) << "### WARNING: source target dimension is less than target";
+        const int num_replicates = target_blobs[j]->width()
+            / source_layer.blobs(j).width();
+        CHECK_EQ(target_blobs[j]->width() % source_layer.blobs(j).width(), 0);
+        target_blobs[j]->FromProtoReplicate(source_layer.blobs(j), num_replicates);
+      } else {
+        CHECK(false) << "dimension mismatched";
+      }
     }
   }
 }

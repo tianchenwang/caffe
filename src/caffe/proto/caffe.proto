@@ -306,6 +306,8 @@ message LayerParameter {
     WINDOW_DATA = 24;
     DRIVING_DATA = 41;
     TILING = 42;
+    DROPOUT_FIXED = 500;
+    LRN_FIXED = 501;
   }
   optional LayerType type = 5; // the layer type from the enum above
 

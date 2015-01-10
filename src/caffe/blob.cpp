@@ -256,6 +256,17 @@ void Blob<Dtype>::FromProto(const BlobProto& proto) {
 }
 
 template <typename Dtype>
+void Blob<Dtype>::FromProtoReplicate(const BlobProto& proto, const int num_replicates) {
+  Reshape(proto.num(), proto.channels(), proto.height(), proto.width() * num_replicates);
+  // copy data
+  Dtype* data_vec = mutable_cpu_data();
+  for (int i = 0; i < count_; ++i) {
+    data_vec[i] = proto.data(i / num_replicates);
+  }
+}
+
+
+template <typename Dtype>
 void Blob<Dtype>::ToProto(BlobProto* proto, bool write_diff) const {
   proto->set_num(num_);
   proto->set_channels(channels_);

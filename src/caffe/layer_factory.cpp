@@ -196,6 +196,8 @@ Layer<Dtype>* GetLayer(const LayerParameter& param) {
     return new DataLayer<Dtype>(param);
   case LayerParameter_LayerType_DROPOUT:
     return new DropoutLayer<Dtype>(param);
+  case LayerParameter_LayerType_DROPOUT_FIXED:
+    return new DropoutFixedLayer<Dtype>(param);
   case LayerParameter_LayerType_DUMMY_DATA:
     return new DummyDataLayer<Dtype>(param);
   case LayerParameter_LayerType_EUCLIDEAN_LOSS:
@@ -220,6 +222,8 @@ Layer<Dtype>* GetLayer(const LayerParameter& param) {
     return new InnerProductLayer<Dtype>(param);
   case LayerParameter_LayerType_LRN:
     return new LRNLayer<Dtype>(param);
+  case LayerParameter_LayerType_LRN_FIXED:
+    return new LRNFixedLayer<Dtype>(param);
   case LayerParameter_LayerType_MEMORY_DATA:
     return new MemoryDataLayer<Dtype>(param);
   case LayerParameter_LayerType_MULTILANE_LABEL:

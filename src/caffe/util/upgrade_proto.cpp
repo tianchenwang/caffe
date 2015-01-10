@@ -464,6 +464,8 @@ LayerParameter_LayerType UpgradeV0LayerType(const string& type) {
     return LayerParameter_LayerType_DATA;
   } else if (type == "dropout") {
     return LayerParameter_LayerType_DROPOUT;
+  } else if (type == "dropout_fixed") {
+    return LayerParameter_LayerType_DROPOUT_FIXED;
   } else if (type == "euclidean_loss") {
     return LayerParameter_LayerType_EUCLIDEAN_LOSS;
   } else if (type == "l1_loss") {
@@ -484,6 +486,8 @@ LayerParameter_LayerType UpgradeV0LayerType(const string& type) {
     return LayerParameter_LayerType_INNER_PRODUCT;
   } else if (type == "lrn") {
     return LayerParameter_LayerType_LRN;
+  } else if (type == "lrn_fixed") {
+    return LayerParameter_LayerType_LRN_FIXED;
   } else if (type == "multinomial_logistic_loss") {
     return LayerParameter_LayerType_MULTINOMIAL_LOGISTIC_LOSS;
   } else if (type == "pool") {
