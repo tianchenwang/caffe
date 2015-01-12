@@ -8,7 +8,7 @@ layers {
   video_data_param {
     source: "/scail/group/deeplearning/driving_data/twangcat/schedules/q50_multilane_planar_train_schedule1_batch48_2cam.txt"
     batch_size: 48
-    rand_skip: 6344
+    #rand_skip: 6344
   }
   transform_param {
     mean_file: "driving_img_mean.binaryproto"
@@ -24,7 +24,7 @@ layers {
   multilane_label_param {
     source: "/scail/group/deeplearning/driving_data/twangcat/schedules/q50_multilane_planar_train_schedule1_batch48_2cam.txt"
     batch_size: 48
-    rand_skip: 6344
+    #rand_skip: 6344
   }
   include: { phase: TRAIN }
 }
@@ -429,7 +429,18 @@ layers {
   top: "pixel-loss"
 }
 
-# Masking the bounding boxes with input label.
+# Masking the regression labels with input label.
+layers {
+  name: "bb-label-mask"
+  type: ELTWISE
+  bottom: "pixel-block"
+  bottom: "bb-label"
+  top: "bb-masked-label"
+  eltwise_param {
+    operation: PROD
+  }
+}
+# Masking the regression predicts with input label.
 layers {
   name: "bb-prob-mask"
   type: ELTWISE
@@ -445,7 +456,7 @@ layers {
   name: "bb-loss"                                                                                                 
   type: L1_LOSS                                                                                                   
   bottom: "bb-masked-output"                                                                                      
-  bottom: "bb-label"                                                                                              
+  bottom: "bb-masked-label"                                                                                              
   top: "bb-loss"                                                                                                  
   loss_weight: 1                                                                                                  
 }  
@@ -455,7 +466,9 @@ layers {
   name: "blob-writer"                                                                                                 
   type: BLOB_WRITER                                                                                                   
   bottom: "pixel-conv"                                                                                      
-  bottom: "bb-output"                                                                                              
+  bottom: "bb-masked-output"                                                                                              
+  bottom: "pixel-label"                                                                                              
+  bottom: "bb-masked-label"                                                                                              
   top: "blob-writer"
   blob_writer_param {
     prefix: "/deep/group/driving_data/twangcat/caffe_results/proto/raw_outputs/4-3-14-gilroy-from_gilroy_g1"

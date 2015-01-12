@@ -151,10 +151,8 @@ int test() {
   float loss = 0;
   for (int i = 0; i < FLAGS_iterations; ++i) {
     float iter_loss;
-    LOG(INFO)<<"HERERER1";
     const vector<Blob<float>*>& result =
         caffe_net.Forward(bottom_vec, &iter_loss);
-    LOG(INFO)<<"HERERER2";
     loss += iter_loss;
     int idx = 0;
     for (int j = 0; j < result.size(); ++j) {

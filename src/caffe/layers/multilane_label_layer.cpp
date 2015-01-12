@@ -155,8 +155,8 @@ void MultilaneLabelLayer<Dtype>::InternalThreadEntry() {
   std::vector<int> trans = lines_[lines_id_].second.second;
   if (batch_size!=frameIds.size() || batch_size!=trans.size())
     LOG(ERROR)<<"Frame count mismatch!";
-  //if(mpiRank(MPI_COMM_WORLD)==0)
-  LOG(INFO)<<"Rank "<<mpiRank(MPI_COMM_WORLD)<<"/"<<mpiSize(MPI_COMM_WORLD)<<": reading label batch "<<lines_id_<<", "<<filename;
+  if(mpiRank(MPI_COMM_WORLD)==0)
+    LOG(INFO)<<"Rank "<<mpiRank(MPI_COMM_WORLD)<<"/"<<mpiSize(MPI_COMM_WORLD)<<": reading label batch "<<lines_id_<<", "<<filename;
 
   clock_t begin = clock();
   if(!this->pyModule)

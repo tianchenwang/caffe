@@ -155,8 +155,7 @@ class MultilaneLabelReader():
         labels_3d= []
         trajectory_3d= []
         count = 0
-        fid = open('/deep/group/driving_data/twangcat/caffe_models/pylog_rank'+str(self.rank), 'a')
-        fid.write('reading '+vid_name+'\n')
+        #fid = open('/deep/group/driving_data/twangcat/caffe_models/pylog_rank'+str(self.rank), 'a')
         time2 = 0
         computed_lanes = 0
         if gps_filename1 not in self.laneVisible:
@@ -195,7 +194,6 @@ class MultilaneLabelReader():
             sideways_curr = np.transpose(MapVec( sideways_start, tr1[fnum1,:,:], cam, T_from_i_to_l))
             center = MapPosTrajectory(tr1[ids,:,:], tr1[fnum1,:,:], cam, T_from_i_to_l,height=lidar_height)
             center2 = MapPosTrajectory(tr1[anchor_ids,:,:], tr1[fnum1,:,:], cam, T_from_i_to_l,height=lidar_height)
-            fid.write('frame num '+str(idx)+' herere1\n')
             temp_label = np.zeros([self.labelh, self.labelw], dtype='f4',order='C')
             if self.predict_depth:
               temp_reg1 = np.zeros([self.labelh, self.labelw, self.labeld/2],dtype='f4',order='C')
@@ -210,7 +208,6 @@ class MultilaneLabelReader():
               if not self.laneVisible[gps_filename1][fnum1, l]:
                 # already know this lane is not visible at this frame. just skip.
                 continue
-              fid.write('frame num '+str(idx)+' lane num '+str(l)+'\n')
               computed_lanes+=1
               lane_key = 'lane'+str(l)
               lane = lanes[lane_key]
@@ -249,13 +246,11 @@ class MultilaneLabelReader():
               #_, l_idx = np.unique(lu, return_index=True)
               #l_idx = np.sort(l_idx) 
               labelpix = (np.transpose(labelpix)).astype('i4')
-              fid.write('frame num '+str(idx)+' lane num '+str(l)+' ... ')
               # draw labels on temp masks
               if self.visualize: # if need to visualize, make the lines more colorful!
                 mask_color = l+1
               else:
                 mask_color=1
-              fid.write('0 ')
               for ii in range(1,imgpix.shape[1]-1):
                 ip = ii-1
                 ic = ii
@@ -263,7 +258,6 @@ class MultilaneLabelReader():
                 yp = labelpix[1,ip]
                 xc = labelpix[0,ic]
                 yc = labelpix[1,ic]
-                fid.write('1 ')
                
                 if np.abs(xp-xc)>1 or np.abs(yp-yc)>1:
                   x1 = xp
@@ -274,37 +268,30 @@ class MultilaneLabelReader():
                 x2 = xc
                 y2 = yc 
                 if yc>-1 and yc<self.labelh and xc>-1 and xc<self.labelw:# and np.abs(yp-yc)<5:
-                  fid.write('2 ')
                   # only update info for the first pt if nothing has been drawn for this grid. otherwise keep the first point and update the second point.
                   if temp_label[yc,xc]<1:
                     regx1 = imgpix[0,ip]
                     regy1 = imgpix[1,ip]
                     depth1 = depths[ip]
-                    fid.write('3 ')
                   else:
                     if self.predict_depth:
                       regx1 = float(temp_reg1[yc,xc,0])
                       regy1 = float(temp_reg1[yc,xc,1])
                       depth1 = float(temp_reg2[yc,xc,1])
-                      fid.write('4 ')
                     else:
                       regx1 = float(temp_reg[yc,xc,0])
                       regy1 = float(temp_reg[yc,xc,1])
-                  fid.write('5 ')
                   regx2 = imgpix[0,ii+1]
                   regy2 = imgpix[1,ii+1]
                   depth2 = depths[ii+1]
-
                   if self.predict_depth:
                     cv2.line(temp_reg1, (x1,y1), (x2,y2) , [regx1, regy1, regx2], thickness=1 )
                     cv2.line(temp_reg2, (x1,y1), (x2,y2), [regy2, depth1, depth2], thickness=1 )
-                    fid.write('6 ')
                   else:
                     cv2.line(temp_reg, (x1,y1), (x2,y2) , [regx1,regy1,regx2,regy2], thickness=1 )
                   # draw mask label
                   cv2.line(temp_label, (x1, y1), (x2, y2), mask_color, thickness=1 )
-                  fid.write('7 ')
-              fid.write('\nframe num '+str(idx)+' lane num '+str(l)+' done\n')
+                  time.sleep(0.0001)
             # fill temp masks into actual batch labels
             self.labels[idx,:,:,0] = temp_label
             if self.predict_depth:
@@ -349,25 +336,25 @@ class MultilaneLabelReader():
         # reshape a batch of label into the right format.
         # caffe does not support 'output block' sizes >1, so flatten it into the z dimension.
         #print ' herere5'
-        fid.write('reshaping...')
         label_view = np.transpose(self.labels, [0,3,1,2]).reshape(batchSize, 1, self.labelh//self.griddim, self.griddim, self.labelw//self.griddim, self.griddim, order='C')
         label_grid = np.transpose(label_view,[0,1,3,5,2,4]).reshape(batchSize, self.griddim*self.griddim,self.labelh//self.griddim,self.labelw//self.griddim, order='C')
         reg_view = np.transpose(self.reg_labels, [0,3,1,2]).reshape(batchSize, self.labeld, self.labelh//self.griddim, self.griddim, self.labelw//self.griddim, self.griddim)
         reg_grid = np.transpose(reg_view,[0,1,3,5,2,4]).reshape(batchSize, self.labeld*self.griddim*self.griddim,self.labelh//self.griddim,self.labelw//self.griddim)
         full_label = np.empty([batchSize, (self.griddim**2)*(self.labeld+1), self.labelh//self.griddim, self.labelw//self.griddim], dtype='f4',order='C')
         full_label[:,0:(self.griddim**2),:,:] = label_grid # binary mask label comes first along the z dimension
+        self.num_pos = np.sum(label_grid, axis=(1,2,3))
+        print self.num_pos
         full_label[:,(self.griddim**2):,:,:] = reg_grid  # followed by the regression labels for each channel.
         #print 'time2: '+str(time2)
         self.time2+=time2
-        if self.timer_cnt%1000==0:
+        #if self.timer_cnt%1000==0:
           #fid = open('caffe_python_time', 'a')
           #fid.write('%d %d\n'%(self.time1/1000, self.time2/1000))
           #fid.close()
-          self.time1 = 0
-          self.time2 = 0
+          #self.time1 = 0
+          #self.time2 = 0
         self.timer_cnt+=1
-        fid.write('reshaping done\n')
-        fid.close()
+        #fid.close()
         return full_label
 
 
