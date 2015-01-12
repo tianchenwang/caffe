@@ -1,4 +1,4 @@
-net: "models/brody/train_val_brody.prototxt"
+net: "models/brody/train_val_driving.prototxt"
 test_iter: 20
 test_interval: 5000
 test_compute_loss: true
@@ -11,5 +11,5 @@ max_iter: 1450000
 momentum: 0.9
 weight_decay: 0.00005
 snapshot: 10000
-snapshot_prefix: "models/brody/test_test"
+snapshot_prefix: "models/brody/caffe_driving"
 solver_mode: GPU

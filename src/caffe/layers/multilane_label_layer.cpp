@@ -42,7 +42,7 @@ void MultilaneLabelLayer<Dtype>::DataLayerSetUp(const vector<Blob<Dtype>*>& bott
 
 
   string batch_string;
-  
+
   string filename;
   //while (infile >> batch_string) {
   while (getline (infile, batch_string)) {
@@ -58,7 +58,7 @@ void MultilaneLabelLayer<Dtype>::DataLayerSetUp(const vector<Blob<Dtype>*>& bott
     }
     std::vector<string> batch_fields;
     // first split a line into fields with delimiter ",". Fields should be [filename, frame_ids, transform_ids]
-    boost::split(batch_fields, batch_string, boost::is_any_of(","), 
+    boost::split(batch_fields, batch_string, boost::is_any_of(","),
                  boost::token_compress_on);
     if(batch_fields.size()!=3)
       LOG(FATAL) << "Each line must have 3 fields separated by comma, "
@@ -68,7 +68,7 @@ void MultilaneLabelLayer<Dtype>::DataLayerSetUp(const vector<Blob<Dtype>*>& bott
     // store frame ids
     std::vector<string> frame_ids_str;
     std::vector<int> frame_ids;
-    boost::split(frame_ids_str, batch_fields[1], boost::is_any_of(" "), 
+    boost::split(frame_ids_str, batch_fields[1], boost::is_any_of(" "),
                  boost::token_compress_on);
     for (int f=0; f<frame_ids_str.size(); ++f) {
       frame_ids.push_back((int)atoi(frame_ids_str[f].c_str()));
@@ -77,12 +77,12 @@ void MultilaneLabelLayer<Dtype>::DataLayerSetUp(const vector<Blob<Dtype>*>& bott
     // store persp transform ids
     std::vector<string> trans_ids_str;
     std::vector<int> trans_ids;
-    boost::split(trans_ids_str, batch_fields[2], boost::is_any_of(" "), 
+    boost::split(trans_ids_str, batch_fields[2], boost::is_any_of(" "),
                  boost::token_compress_on);
     for (int f=0; f<trans_ids_str.size(); ++f) {
       trans_ids.push_back((int)atoi(trans_ids_str[f].c_str()));
     }
-       
+
     lines_.push_back(std::make_pair(filename, std::make_pair(frame_ids, trans_ids)));
   }
 
@@ -198,7 +198,7 @@ void MultilaneLabelLayer<Dtype>::InternalThreadEntry() {
     LOG(FATAL) <<"numpy label reading function failed!";
   }
   np::ndarray pArray = np::from_object(arr_handle);
-  
+
   int array_size = py::extract<int>(pArray.attr("size"));
   //LOG(INFO)<<"numpy array size = "<<array_size;
   float* pArrayPtr = (float*)(pArray.get_data());

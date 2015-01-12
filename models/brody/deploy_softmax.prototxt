@@ -1,38 +1,10 @@
-name: "CaffeNet"
-layers {
-  name: "data"
-  type: DATA
-  top: "data"
-  top: "label"
-  data_param {
-    source: "/deep/u/willsong/data/ilsvrc12_train_lmdb"
-    backend: LMDB
-    batch_size: 256
-  }
-  transform_param {
-    crop_size: 227
-    mean_file: "data/ilsvrc12/imagenet_mean.binaryproto"
-    mirror: true
-  }
-  include: { phase: TRAIN }
-}
-layers {
-  name: "data"
-  type: DATA
-  top: "data"
-  top: "label"
-  data_param {
-    source: "/deep/u/willsong/data/ilsvrc12_val_lmdb"
-    backend: LMDB
-    batch_size: 50
-  }
-  transform_param {
-    crop_size: 227
-    mean_file: "data/ilsvrc12/imagenet_mean.binaryproto"
-    mirror: false
-  }
-  include: { phase: TEST }
-}
+name: "BrodyNet"
+input: "data"
+input_dim: 10
+input_dim: 3
+input_dim: 480
+input_dim: 640
+
 layers {
   name: "conv1"
   type: CONVOLUTION
@@ -52,7 +24,7 @@ layers {
     }
     bias_filler {
       type: "constant"
-      value: 0
+      value: 0.1
     }
   }
 }
@@ -104,7 +76,7 @@ layers {
     }
     bias_filler {
       type: "constant"
-      value: 1
+      value: 0.1
     }
   }
 }
@@ -155,7 +127,7 @@ layers {
     }
     bias_filler {
       type: "constant"
-      value: 0
+      value: 0.1
     }
   }
 }
@@ -185,7 +157,7 @@ layers {
     }
     bias_filler {
       type: "constant"
-      value: 1
+      value: 0.1
     }
   }
 }
@@ -215,7 +187,7 @@ layers {
     }
     bias_filler {
       type: "constant"
-      value: 1
+      value: 0.1
     }
   }
 }
@@ -237,19 +209,21 @@ layers {
   }
 }
 layers {
-  name: "fc6"
-  type: INNER_PRODUCT
+  name: "fc6-conv"
+  type: CONVOLUTION
   bottom: "pool5"
-  top: "fc6"
+  top: "fc6-conv"
   blobs_lr: 1
   blobs_lr: 2
   weight_decay: 1
   weight_decay: 0
-  inner_product_param {
+  convolution_param {
     num_output: 4096
+    kernel_size: 6
+    pad: 3
     weight_filler {
       type: "gaussian"
-      std: 0.005
+      std: 0.01
     }
     bias_filler {
       type: "constant"
@@ -260,32 +234,33 @@ layers {
 layers {
   name: "relu6"
   type: RELU
-  bottom: "fc6"
-  top: "fc6"
+  bottom: "fc6-conv"
+  top: "fc6-conv"
 }
 layers {
   name: "drop6"
   type: DROPOUT
-  bottom: "fc6"
-  top: "fc6"
+  bottom: "fc6-conv"
+  top: "fc6-conv"
   dropout_param {
-    dropout_ratio: 0.5
+    dropout_ratio: 0.0
   }
 }
 layers {
-  name: "fc7"
-  type: INNER_PRODUCT
-  bottom: "fc6"
-  top: "fc7"
+  name: "fc7-conv"
+  type: CONVOLUTION
+  bottom: "fc6-conv"
+  top: "fc7-conv"
   blobs_lr: 1
   blobs_lr: 2
   weight_decay: 1
   weight_decay: 0
-  inner_product_param {
+  convolution_param {
     num_output: 4096
+    kernel_size: 1
     weight_filler {
       type: "gaussian"
-      std: 0.005
+      std: 0.01
     }
     bias_filler {
       type: "constant"
@@ -296,51 +271,89 @@ layers {
 layers {
   name: "relu7"
   type: RELU
-  bottom: "fc7"
-  top: "fc7"
+  bottom: "fc7-conv"
+  top: "fc7-conv"
 }
 layers {
   name: "drop7"
   type: DROPOUT
-  bottom: "fc7"
-  top: "fc7"
+  bottom: "fc7-conv"
+  top: "fc7-conv"
   dropout_param {
-    dropout_ratio: 0.5
+    dropout_ratio: 0.0
   }
 }
+
 layers {
-  name: "fc8"
-  type: INNER_PRODUCT
-  bottom: "fc7"
-  top: "fc8"
+  name: "bb-output"
+  type: CONVOLUTION
+  bottom: "fc7-conv"
+  top: "bb-output"
   blobs_lr: 1
   blobs_lr: 2
   weight_decay: 1
   weight_decay: 0
-  inner_product_param {
-    num_output: 1000
+  convolution_param {
+    num_output: 64
+    kernel_size: 1
     weight_filler {
       type: "gaussian"
       std: 0.01
     }
     bias_filler {
       type: "constant"
-      value: 0
+      value: 1.0
     }
   }
 }
+
 layers {
-  name: "accuracy"
-  type: ACCURACY
-  bottom: "fc8"
-  bottom: "label"
-  top: "accuracy"
-  include: { phase: TEST }
+  name: "pixel-conv"
+  type: CONVOLUTION
+  bottom: "fc7-conv"
+  top: "pixel-conv"
+  blobs_lr: 1
+  blobs_lr: 2
+  weight_decay: 1
+  weight_decay: 0
+  convolution_param {
+    num_output: 32
+    kernel_size: 1
+    weight_filler {
+      type: "gaussian"
+      std: 0.005
+    }
+    bias_filler {
+      type: "constant"
+      value: 1.0
+    }
+  }
 }
+
 layers {
-  name: "loss"
-  type: SOFTMAX_LOSS
-  bottom: "fc8"
-  bottom: "label"
-  top: "loss"
+  name: "pixel-tile"
+  type: TILING
+  bottom: "pixel-conv"
+  top: "pixel-conv-tiled"
+  tiling_param {
+    tile_dim: 4
+  }
+}
+
+layers {
+  name: "bb-tile"
+  type: TILING
+  bottom: "bb-output"
+  top: "bb-output-tiled"
+  tiling_param {
+    tile_dim: 4
+  }
+}
+
+# Pixel level softmax prediction.
+layers {
+  name: "pixel-prob"
+  type: SOFTMAX
+  bottom: "pixel-conv-tiled"
+  top: "pixel-prob"
 }

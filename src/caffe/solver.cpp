@@ -190,10 +190,10 @@ void Solver<Dtype>::Solve(const char* resume_file) {
       Snapshot();
     }
 
-    //if (param_.test_interval() && iter_ % param_.test_interval() == 0
-    //    && (iter_ > 0 || param_.test_initialization())) {
-    //  TestAll();
-    //}
+    if (param_.test_interval() && iter_ % param_.test_interval() == 0
+        && (iter_ > 0 || param_.test_initialization())) {
+      TestAll();
+    }
 
     const bool display = param_.display() && iter_ % param_.display() == 0;
     //const bool display = true;
@@ -301,9 +301,9 @@ void Solver<Dtype>::Solve(const char* resume_file) {
     net_->Forward(bottom_vec, &loss);
     LOG(INFO) << "Iteration " << iter_ << ", loss = " << loss;
   }
-  //if (param_.test_interval() && iter_ % param_.test_interval() == 0) {
-  //  TestAll();
-  //}
+  if (param_.test_interval() && iter_ % param_.test_interval() == 0) {
+    TestAll();
+  }
   LOG(INFO) << "Optimization Done.";
 }
 
@@ -330,13 +330,13 @@ void Solver<Dtype>::Test(const int test_net_id) {
   const shared_ptr<Net<Dtype> >& test_net = test_nets_[test_net_id];
   Dtype loss = 0;
   for (int i = 0; i < param_.test_iter(test_net_id); ++i) {
-    LOG(INFO) << "i = " << i<<" of "<<param_.test_iter(test_net_id);
     Dtype iter_loss;
     const vector<Blob<Dtype>*>& result =
         test_net->Forward(bottom_vec, &iter_loss);
     if (param_.test_compute_loss()) {
       loss += iter_loss;
     }
+    /*
     if (i == 0) {
       for (int j = 0; j < result.size(); ++j) {
         const Dtype* result_vec = result[j]->cpu_data();
@@ -354,11 +354,14 @@ void Solver<Dtype>::Test(const int test_net_id) {
         }
       }
     }
+    */
   }
   if (param_.test_compute_loss()) {
     loss /= param_.test_iter(test_net_id);
     LOG(INFO) << "Test loss: " << loss;
   }
+
+  /*
   double sum_mean_score = 0.0;
   for (int i = 0; i < test_score.size(); ++i) {
     const Dtype mean_score = test_score[i] / param_.test_iter(test_net_id);
@@ -375,6 +378,7 @@ void Solver<Dtype>::Test(const int test_net_id) {
   }
   LOG(INFO) << "    Test net output #" << 0 << ": " << output_name << " = "
       << sum_mean_score << loss_msg_stream.str();
+  */
 
   Caffe::set_phase(Caffe::TRAIN);
 }

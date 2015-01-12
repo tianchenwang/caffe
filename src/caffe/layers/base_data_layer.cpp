@@ -33,9 +33,10 @@ void BaseDataLayer<Dtype>::LayerSetUp(const vector<Blob<Dtype>*>& bottom,
   // check if we want to have mean
   if (transform_param_.has_mean_file()) {
     const string& mean_file = transform_param_.mean_file();
-    LOG(INFO) << "Loading mean file from" << mean_file;
+    LOG(INFO) << "Loading mean file from " << mean_file;
     BlobProto blob_proto;
     ReadProtoFromBinaryFileOrDie(mean_file.c_str(), &blob_proto);
+    LOG(INFO) << "Loaded proto from binary " << mean_file;
     data_mean_.FromProto(blob_proto);
     CHECK_GE(data_mean_.num(), 1);
     CHECK_GE(data_mean_.channels(), datum_channels_);
@@ -47,6 +48,7 @@ void BaseDataLayer<Dtype>::LayerSetUp(const vector<Blob<Dtype>*>& bottom,
   }
   mean_ = data_mean_.cpu_data();
   data_transformer_.InitRand();
+  LOG(INFO) << "base layer initialized.";
 }
 
 template <typename Dtype>
