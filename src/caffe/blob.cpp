@@ -265,6 +265,14 @@ void Blob<Dtype>::FromProtoReplicate(const BlobProto& proto, const int num_repli
   }
 }
 
+template <typename Dtype>
+void Blob<Dtype>::FromProtoDataOnly(const BlobProto& proto) {
+  // copy data
+  Dtype* data_vec = mutable_cpu_data();
+  for (int i = 0; i < count_; ++i) {
+    data_vec[i] = proto.data(i);
+  }
+}
 
 template <typename Dtype>
 void Blob<Dtype>::ToProto(BlobProto* proto, bool write_diff) const {

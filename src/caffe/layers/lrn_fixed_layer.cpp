@@ -110,12 +110,11 @@ void LRNFixedLayer<Dtype>::CrossChannelForward_cpu(
   Dtype* scale_data = scale_.mutable_cpu_data();
   // start with the constant value
   for (int i = 0; i < scale_.count(); ++i) {
-    scale_data[i] = 1.;
+    scale_data[i] = 2.;
   }
   Blob<Dtype> padded_square(1, channels_ + size_ - 1, height_, width_);
   Dtype* padded_square_data = padded_square.mutable_cpu_data();
   caffe_set(padded_square.count(), Dtype(0), padded_square_data);
-  Dtype alpha_over_size = alpha_ / size_;
   // go through the images
   for (int n = 0; n < num_; ++n) {
     // compute the padded square
@@ -124,7 +123,7 @@ void LRNFixedLayer<Dtype>::CrossChannelForward_cpu(
         padded_square_data + padded_square.offset(0, pre_pad_));
     // Create the first channel scale
     for (int c = 0; c < size_; ++c) {
-      caffe_axpy<Dtype>(height_ * width_, alpha_over_size,
+      caffe_axpy<Dtype>(height_ * width_, alpha_,
           padded_square_data + padded_square.offset(0, c),
           scale_data + scale_.offset(n, 0));
     }
@@ -134,11 +133,11 @@ void LRNFixedLayer<Dtype>::CrossChannelForward_cpu(
           scale_data + scale_.offset(n, c - 1),
           scale_data + scale_.offset(n, c));
       // add head
-      caffe_axpy<Dtype>(height_ * width_, alpha_over_size,
+      caffe_axpy<Dtype>(height_ * width_, alpha_,
           padded_square_data + padded_square.offset(0, c + size_ - 1),
           scale_data + scale_.offset(n, c));
       // subtract tail
-      caffe_axpy<Dtype>(height_ * width_, -alpha_over_size,
+      caffe_axpy<Dtype>(height_ * width_, -alpha_,
           padded_square_data + padded_square.offset(0, c - 1),
           scale_data + scale_.offset(n, c));
     }
@@ -190,7 +189,8 @@ void LRNFixedLayer<Dtype>::CrossChannelBackward_cpu(
   // We hack a little bit by using the diff() to store an additional result
   Dtype* accum_ratio_times_bottom = accum_ratio.mutable_cpu_diff();
   caffe_set(padded_ratio.count(), Dtype(0), padded_ratio_data);
-  Dtype cache_ratio_value = 2. * alpha_ * beta_ / size_;
+//  Dtype cache_ratio_value = 2. * alpha_ * beta_ / size_;
+  Dtype cache_ratio_value = 2. * alpha_ * beta_;
 
   caffe_powx<Dtype>(scale_.count(), scale_data, -beta_, bottom_diff);
   caffe_mul<Dtype>(scale_.count(), top_diff, bottom_diff, bottom_diff);

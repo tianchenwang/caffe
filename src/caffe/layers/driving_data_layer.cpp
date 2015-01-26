@@ -283,7 +283,6 @@ bool DrivingDataLayer<Dtype>::ReadBoundingBoxLabelToDatumLegacy(
         new cv::Mat(full_label_height, full_label_width, CV_32F, cv::Scalar(0.0)));
   }
 
-  int total_num_pixels = 0;
   for (int i = 0; i < data.car_boxes_size(); ++i) {
     int xmin = data.car_boxes(i).xmin();
     int ymin = data.car_boxes(i).ymin();
@@ -319,7 +318,6 @@ bool DrivingDataLayer<Dtype>::ReadBoundingBoxLabelToDatumLegacy(
                gxmax - gxmin + (gxmax == gxmin && gxmax < full_label_width ? 1 : 0),
                gymax - gymin + (gymax == gymin && gymax < full_label_height ? 1 : 0));
 
-    total_num_pixels += r.area();
     int normalization_height = ymax - ymin == 0 ? 1 : ymax - ymin;
     CHECK_GT(normalization_height, 0);
     int normalization_width = xmax - xmin == 0 ? 1 : xmax - xmin;
@@ -339,6 +337,15 @@ bool DrivingDataLayer<Dtype>::ReadBoundingBoxLabelToDatumLegacy(
     }
   }
 
+
+  int total_num_pixels = 0;
+  for (int y = 0; y < full_label_height; ++y) {
+    for (int x = 0; x < full_label_width; ++x) {
+      if (labels[num_total_labels - 1]->at<float>(y, x) == 1.0) {
+        total_num_pixels++;
+      }
+    }
+  }
   if (total_num_pixels != 0) {
     float reweight_value = 1.0 / total_num_pixels;
     for (int y = 0; y < full_label_height; ++y) {
@@ -399,6 +406,7 @@ bool DrivingDataLayer<Dtype>::ReadBoundingBoxLabelToDatum(
   const int height = data.car_label_height();
   const int full_label_width = width * grid_dim;
   const int full_label_height = height * grid_dim;
+  const float half_shrink_factor = data.car_shrink_factor() / 2;
   const float scaling = static_cast<float>(full_label_width) / data.car_cropped_width();
 
   // 1 pixel label, 4 bounding box coordinates, 2 normalization labels.
@@ -412,7 +420,6 @@ bool DrivingDataLayer<Dtype>::ReadBoundingBoxLabelToDatum(
         new cv::Mat(full_label_height, full_label_width, CV_32F, cv::Scalar(0.0)));
   }
 
-  int total_num_pixels = 0;
   for (int i = 0; i < data.car_boxes_size(); ++i) {
     int xmin = data.car_boxes(i).xmin();
     int ymin = data.car_boxes(i).ymin();
@@ -425,10 +432,10 @@ bool DrivingDataLayer<Dtype>::ReadBoundingBoxLabelToDatum(
     float w = xmax - xmin;
     float h = ymax - ymin;
     // shrink bboxes
-    int gxmin = cvRound((xmin + w / 4) * scaling);
-    int gxmax = cvRound((xmax - w / 4) * scaling);
-    int gymin = cvRound((ymin + h / 4) * scaling);
-    int gymax = cvRound((ymax - h / 4) * scaling);
+    int gxmin = cvRound((xmin + w * half_shrink_factor) * scaling);
+    int gxmax = cvRound((xmax - w * half_shrink_factor) * scaling);
+    int gymin = cvRound((ymin + h * half_shrink_factor) * scaling);
+    int gymax = cvRound((ymax - h * half_shrink_factor) * scaling);
 
     CHECK_LE(gxmin, gxmax);
     CHECK_LE(gymin, gymax);
@@ -448,7 +455,6 @@ bool DrivingDataLayer<Dtype>::ReadBoundingBoxLabelToDatum(
                gxmax - gxmin + (gxmax == gxmin && gxmax < full_label_width ? 1 : 0),
                gymax - gymin + (gymax == gymin && gymax < full_label_height ? 1 : 0));
 
-    total_num_pixels += r.area();
     int normalization_height = ymax - ymin == 0 ? 1 : ymax - ymin;
     CHECK_GT(normalization_height, 0);
     int normalization_width = xmax - xmin == 0 ? 1 : xmax - xmin;
@@ -468,6 +474,14 @@ bool DrivingDataLayer<Dtype>::ReadBoundingBoxLabelToDatum(
     }
   }
 
+  int total_num_pixels = 0;
+  for (int y = 0; y < full_label_height; ++y) {
+    for (int x = 0; x < full_label_width; ++x) {
+      if (labels[num_total_labels - 1]->at<float>(y, x) == 1.0) {
+        total_num_pixels++;
+      }
+    }
+  }
   if (total_num_pixels != 0) {
     float reweight_value = 1.0 / total_num_pixels;
     for (int y = 0; y < full_label_height; ++y) {
