@@ -199,9 +199,9 @@ void Solver<Dtype>::Solve(const char* resume_file) {
     //const bool display = true;
     net_->set_debug_info(display && param_.debug_info());
     Dtype loss = net_->ForwardBackward(bottom_vec);
-    if (display) {
+    const vector<Blob<Dtype>*>& result = net_->output_blobs();
+    if (display || (iter_>20000 && loss>6000)) {
       LOG(INFO) << "Iteration " << iter_ << ", loss = " << loss;
-      const vector<Blob<Dtype>*>& result = net_->output_blobs();
       //Visualization code added by Tao.
       bool predict_depth = true;
       string img_str("data");
@@ -250,8 +250,12 @@ void Solver<Dtype>::Solve(const char* resume_file) {
         int image_id = (this->iter_/param_.display())*batch_size+n;
         cv::Mat save_img = save_imgs[n];
         std::ostringstream stringStream;
-        stringStream <<save_dir<< "img"<<image_id<<"_"<<mpiRank(MPI_COMM_WORLD)<<".png";
+        stringStream <<save_dir<< "img"<<image_id<<"_"<<mpiRank(MPI_COMM_WORLD);
+        if(iter_>60000 && loss>6000)
+          stringStream <<"_bad"<<iter_;
+        stringStream <<".png";
         std::string save_name = stringStream.str();
+        LOG(INFO)<< save_name;
         const Dtype* pix_label = pix_start+n*grid_length*quad_height*quad_width;
         const Dtype* reg_label = bb_start+n*num_regression*grid_length*quad_height*quad_width;
         drawResults<Dtype>(save_img, pix_label, reg_label, 
@@ -259,14 +263,15 @@ void Solver<Dtype>::Solve(const char* resume_file) {
                            quad_height, quad_width, grid_dim);
         cv::imwrite(save_name, save_img);
       }
-      //end visualization code
+    //end visualization code
+      
       int score_index = 0;
       for (int j = 0; j < result.size(); ++j) {
         const Dtype* result_vec = result[j]->cpu_data();
         const string& output_name =
-            net_->blob_names()[net_->output_blob_indices()[j]];
+          net_->blob_names()[net_->output_blob_indices()[j]];
         const Dtype loss_weight =
-            net_->blob_loss_weights()[net_->output_blob_indices()[j]];
+          net_->blob_loss_weights()[net_->output_blob_indices()[j]];
         double loss_sum = 0.0;
         for (int k = 0; k < result[j]->count(); ++k) {
           loss_sum += result_vec[k];
@@ -277,10 +282,38 @@ void Solver<Dtype>::Solve(const char* resume_file) {
                           << " = " << loss_weight * loss_sum << " loss)";
         }
         LOG(INFO) << "    Train net output #"
-            << score_index++ << ": " << output_name << " = "
-            << loss_sum << loss_msg_stream.str();
+          << score_index++ << ": " << output_name << " = "
+          << loss_sum << loss_msg_stream.str();
       }
     }
+
+
+    //int score_index = 0;
+    std::ostringstream stringStream;
+    stringStream <<"/deep/group/driving_data/twangcat/caffe_models/objlog_rank"<<mpiRank(MPI_COMM_WORLD);
+    std::string objlog_name = stringStream.str();
+    std::ofstream objfile (objlog_name.c_str(),ios::app);
+    for (int j = 0; j < result.size(); ++j) {
+      const Dtype* result_vec = result[j]->cpu_data();
+      const string& output_name =
+        net_->blob_names()[net_->output_blob_indices()[j]];
+      const Dtype loss_weight =
+        net_->blob_loss_weights()[net_->output_blob_indices()[j]];
+      double loss_sum = 0.0;
+      for (int k = 0; k < result[j]->count(); ++k) {
+        loss_sum += result_vec[k];
+      }
+      ostringstream loss_msg_stream;
+      objfile<<loss_sum<<" ";
+    }
+    objfile<<std::endl;
+    objfile.close();
+    
+
+
+
+
+
 
     ComputeUpdateValue();
     int sync = param_.display();

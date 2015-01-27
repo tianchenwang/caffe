@@ -87,3 +87,6 @@ docs/dev
 \#*\#
 .\#*
 TAGS
+
+# python label reader time logs
+caffe_python_time*

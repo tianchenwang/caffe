@@ -6,9 +6,9 @@ layers {
   type: VIDEO_DATA
   top: "data"
   video_data_param {
-    source: "/scail/group/deeplearning/driving_data/twangcat/schedules/q50_multilane_planar_train_schedule1_batch48_2cam.txt"
-    batch_size: 48
-    #rand_skip: 6344
+    source: "/scail/group/deeplearning/driving_data/twangcat/schedules/q50_multilane_planar_train_schedule1_batch40_2cam.txt"
+    batch_size: 40
+    rand_skip: 78000
   }
   transform_param {
     mean_file: "driving_img_mean.binaryproto"
@@ -22,9 +22,9 @@ layers {
   type: MULTILANE_LABEL
   top: "label"
   multilane_label_param {
-    source: "/scail/group/deeplearning/driving_data/twangcat/schedules/q50_multilane_planar_train_schedule1_batch48_2cam.txt"
-    batch_size: 48
-    #rand_skip: 6344
+    source: "/scail/group/deeplearning/driving_data/twangcat/schedules/q50_multilane_planar_train_schedule1_batch40_2cam.txt"
+    batch_size: 40
+    rand_skip: 78000
   }
   include: { phase: TRAIN }
 }
@@ -35,7 +35,7 @@ layers {
   type: VIDEO_DATA
   top: "data"
   video_data_param {
-    source: "/scail/group/deeplearning/driving_data/twangcat/schedules/q50_multilane_planar_test_schedule_4-3-14-gilroy-from_gilroy_g1.avi_batch48.txt"
+    source: "/scail/group/deeplearning/driving_data/twangcat/schedules/q50_multilane_planar_test_schedule_4-10-14-pleasanton-880n_b2.avi_batch48.txt"
     batch_size: 48
   }
   transform_param {
@@ -50,7 +50,7 @@ layers {
   type: MULTILANE_LABEL
   top: "label"
   multilane_label_param {
-    source: "/scail/group/deeplearning/driving_data/twangcat/schedules/q50_multilane_planar_test_schedule_4-3-14-gilroy-from_gilroy_g1.avi_batch48.txt"
+    source: "/scail/group/deeplearning/driving_data/twangcat/schedules/q50_multilane_planar_test_schedule_4-10-14-pleasanton-880n_b2.avi_batch48.txt"
     batch_size: 48
   }
   include: { phase: TEST }
@@ -117,20 +117,9 @@ layers {
   top: "conv1"
 }
 layers {
-  name: "pool1"
-  type: POOLING
-  bottom: "conv1"
-  top: "pool1"
-  pooling_param {
-    pool: MAX
-    kernel_size: 3
-    stride: 2
-  }
-}
-layers {
   name: "norm1"
-  type: LRN
-  bottom: "pool1"
+  type: LRN_FIXED
+  bottom: "conv1"
   top: "norm1"
   lrn_param {
     local_size: 5
@@ -139,9 +128,20 @@ layers {
   }
 }
 layers {
+  name: "pool1"
+  type: POOLING
+  bottom: "norm1"
+  top: "pool1"
+  pooling_param {
+    pool: MAX
+    kernel_size: 3
+    stride: 2
+  }
+}
+layers {
   name: "conv2"
   type: CONVOLUTION
-  bottom: "norm1"
+  bottom: "pool1"
   top: "conv2"
   blobs_lr: 1
   blobs_lr: 2
@@ -169,20 +169,9 @@ layers {
   top: "conv2"
 }
 layers {
-  name: "pool2"
-  type: POOLING
-  bottom: "conv2"
-  top: "pool2"
-  pooling_param {
-    pool: MAX
-    kernel_size: 3
-    stride: 2
-  }
-}
-layers {
   name: "norm2"
-  type: LRN
-  bottom: "pool2"
+  type: LRN_FIXED
+  bottom: "conv2"
   top: "norm2"
   lrn_param {
     local_size: 5
@@ -191,9 +180,20 @@ layers {
   }
 }
 layers {
+  name: "pool2"
+  type: POOLING
+  bottom: "norm2"
+  top: "pool2"
+  pooling_param {
+    pool: MAX
+    kernel_size: 3
+    stride: 2
+  }
+}
+layers {
   name: "conv3"
   type: CONVOLUTION
-  bottom: "norm2"
+  bottom: "pool2"
   top: "conv3"
   blobs_lr: 1
   blobs_lr: 2
@@ -259,7 +259,7 @@ layers {
   weight_decay: 1
   weight_decay: 0
   convolution_param {
-    num_output: 256
+    num_output: 384
     pad: 1
     kernel_size: 3
     group: 2
@@ -371,8 +371,8 @@ layers {
   type: CONVOLUTION
   bottom: "fc7-conv"
   top: "bb-output"
-  blobs_lr: 100
-  blobs_lr: 200
+  #blobs_lr: 100
+  #blobs_lr: 200
   weight_decay: 0.00001
   weight_decay: 0
   convolution_param {
@@ -466,12 +466,13 @@ layers {
   name: "blob-writer"                                                                                                 
   type: BLOB_WRITER                                                                                                   
   bottom: "pixel-conv"                                                                                      
-  bottom: "bb-masked-output"                                                                                              
+  bottom: "bb-output"                                                                                              
   bottom: "pixel-label"                                                                                              
   bottom: "bb-masked-label"                                                                                              
   top: "blob-writer"
   blob_writer_param {
-    prefix: "/deep/group/driving_data/twangcat/caffe_results/proto/raw_outputs/4-3-14-gilroy-from_gilroy_g1"
+    #prefix: "/deep/group/driving_data/twangcat/caffe_results/proto/raw_outputs/4-3-14-gilroy-from_gilroy_g1"
+    prefix: "/deep/group/driving_data/twangcat/caffe_results/proto/raw_outputs/4-10-14-pleasanton-880n_b2"
   }
   include: { phase: TEST }                                                                                                  
 }  
