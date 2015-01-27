@@ -34,7 +34,7 @@ enum TopLayerType {
 const int kNumData = 1;
 const int kNumLabels = 1;
 const int kNumBBRegressionCoords = 4;
-const int kNumRegressionMasks = 7;
+const int kNumRegressionMasks = 8;
 
 namespace caffe {
 
@@ -272,18 +272,14 @@ bool DrivingDataLayer<Dtype>::ReadBoundingBoxLabelToDatumLegacy(
   const int full_label_height = height * grid_dim;
   const float scaling = static_cast<float>(full_label_width) / data.car_cropped_width();
 
-  // 1 pixel label, 4 bounding box coordinates, 2 normalization labels.
-  const int num_mask_label = 1;
-  const int num_bb_labels = 4;
-  const int num_norm_labels = 2;
-  const int num_total_labels = num_mask_label + num_bb_labels + num_norm_labels;
+  // 1 pixel label, 4 bounding box coordinates, 3 normalization labels.
+  const int num_total_labels = kNumRegressionMasks;
   vector<cv::Mat *> labels;
   for (int i = 0; i < num_total_labels; ++i) {
     labels.push_back(
         new cv::Mat(full_label_height, full_label_width, CV_32F, cv::Scalar(0.0)));
   }
 
-  int total_num_pixels = 0;
   for (int i = 0; i < data.car_boxes_size(); ++i) {
     int xmin = data.car_boxes(i).xmin();
     int ymin = data.car_boxes(i).ymin();
@@ -319,7 +315,6 @@ bool DrivingDataLayer<Dtype>::ReadBoundingBoxLabelToDatumLegacy(
                gxmax - gxmin + (gxmax == gxmin && gxmax < full_label_width ? 1 : 0),
                gymax - gymin + (gymax == gymin && gymax < full_label_height ? 1 : 0));
 
-    total_num_pixels += r.area();
     int normalization_height = ymax - ymin == 0 ? 1 : ymax - ymin;
     CHECK_GT(normalization_height, 0);
     int normalization_width = xmax - xmin == 0 ? 1 : xmax - xmin;
@@ -339,6 +334,15 @@ bool DrivingDataLayer<Dtype>::ReadBoundingBoxLabelToDatumLegacy(
     }
   }
 
+
+  int total_num_pixels = 0;
+  for (int y = 0; y < full_label_height; ++y) {
+    for (int x = 0; x < full_label_width; ++x) {
+      if (labels[num_total_labels - 1]->at<float>(y, x) == 1.0) {
+        total_num_pixels++;
+      }
+    }
+  }
   if (total_num_pixels != 0) {
     float reweight_value = 1.0 / total_num_pixels;
     for (int y = 0; y < full_label_height; ++y) {
@@ -399,20 +403,17 @@ bool DrivingDataLayer<Dtype>::ReadBoundingBoxLabelToDatum(
   const int height = data.car_label_height();
   const int full_label_width = width * grid_dim;
   const int full_label_height = height * grid_dim;
+  const float half_shrink_factor = data.car_shrink_factor() / 2;
   const float scaling = static_cast<float>(full_label_width) / data.car_cropped_width();
 
-  // 1 pixel label, 4 bounding box coordinates, 2 normalization labels.
-  const int num_mask_label = 1;
-  const int num_bb_labels = 4;
-  const int num_norm_labels = 2;
-  const int num_total_labels = num_mask_label + num_bb_labels + num_norm_labels;
+  // 1 pixel label, 4 bounding box coordinates, 3 normalization labels.
+  const int num_total_labels = kNumRegressionMasks;
   vector<cv::Mat *> labels;
   for (int i = 0; i < num_total_labels; ++i) {
     labels.push_back(
         new cv::Mat(full_label_height, full_label_width, CV_32F, cv::Scalar(0.0)));
   }
 
-  int total_num_pixels = 0;
   for (int i = 0; i < data.car_boxes_size(); ++i) {
     int xmin = data.car_boxes(i).xmin();
     int ymin = data.car_boxes(i).ymin();
@@ -425,10 +426,10 @@ bool DrivingDataLayer<Dtype>::ReadBoundingBoxLabelToDatum(
     float w = xmax - xmin;
     float h = ymax - ymin;
     // shrink bboxes
-    int gxmin = cvRound((xmin + w / 4) * scaling);
-    int gxmax = cvRound((xmax - w / 4) * scaling);
-    int gymin = cvRound((ymin + h / 4) * scaling);
-    int gymax = cvRound((ymax - h / 4) * scaling);
+    int gxmin = cvRound((xmin + w * half_shrink_factor) * scaling);
+    int gxmax = cvRound((xmax - w * half_shrink_factor) * scaling);
+    int gymin = cvRound((ymin + h * half_shrink_factor) * scaling);
+    int gymax = cvRound((ymax - h * half_shrink_factor) * scaling);
 
     CHECK_LE(gxmin, gxmax);
     CHECK_LE(gymin, gymax);
@@ -448,26 +449,27 @@ bool DrivingDataLayer<Dtype>::ReadBoundingBoxLabelToDatum(
                gxmax - gxmin + (gxmax == gxmin && gxmax < full_label_width ? 1 : 0),
                gymax - gymin + (gymax == gymin && gymax < full_label_height ? 1 : 0));
 
-    total_num_pixels += r.area();
-    int normalization_height = ymax - ymin == 0 ? 1 : ymax - ymin;
-    CHECK_GT(normalization_height, 0);
     int normalization_width = xmax - xmin == 0 ? 1 : xmax - xmin;
     CHECK_GT(normalization_width, 0);
-    float default_flabels[num_total_labels] =
-        {1.0, xmin, ymin, xmax, ymax, 1.0 / normalization_width, 1.0};
-    float y_flabels[num_total_labels] =
-        {1.0, xmin, ymin, xmax, ymax, 1.0 / normalization_height, 1.0};
+    int normalization_height = ymax - ymin == 0 ? 1 : ymax - ymin;
+    CHECK_GT(normalization_height, 0);
+    float flabels[num_total_labels] =
+        {1.0, xmin, ymin, xmax, ymax, 1.0 / normalization_width,
+         1.0 / normalization_height, 1.0};
     for (int j = 0; j < num_total_labels; ++j) {
-      if (j == 2 || j == 4) {
-        cv::Mat roi(*labels[j], r);
-        roi = cv::Scalar(y_flabels[j]);
-      } else {
-        cv::Mat roi(*labels[j], r);
-        roi = cv::Scalar(default_flabels[j]);
-      }
+      cv::Mat roi(*labels[j], r);
+      roi = cv::Scalar(flabels[j]);
     }
   }
 
+  int total_num_pixels = 0;
+  for (int y = 0; y < full_label_height; ++y) {
+    for (int x = 0; x < full_label_width; ++x) {
+      if (labels[num_total_labels - 1]->at<float>(y, x) == 1.0) {
+        total_num_pixels++;
+      }
+    }
+  }
   if (total_num_pixels != 0) {
     float reweight_value = 1.0 / total_num_pixels;
     for (int y = 0; y < full_label_height; ++y) {

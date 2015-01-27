@@ -65,6 +65,8 @@ message DrivingData {
   optional int32 car_label_height = 10 [default = 15];
   // Tiling dimensions.
   optional int32 car_label_resolution = 11 [default = 4];
+  // Shrink factor for the car prediction mask.
+  optional float car_shrink_factor = 12 [default = 0.5];
 }
 
 message FillerParameter {

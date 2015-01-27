@@ -102,6 +102,7 @@ class Blob {
   void SyncDiff();
   void SyncData();
   void FromProto(const BlobProto& proto);
+  void FromProtoDataOnly(const BlobProto& proto);
   void FromProtoReplicate(const BlobProto& proto, const int num_replicates);
   void ToProto(BlobProto* proto, bool write_diff = false) const;
 

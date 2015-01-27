@@ -719,18 +719,28 @@ void Net<Dtype>::CopyTrainedLayersFrom(const NetParameter& param) {
                 << source_layer.blobs(j).channels() << "x"
                 << source_layer.blobs(j).height() << "x"
                 << source_layer.blobs(j).width();
-      CHECK_EQ(target_blobs[j]->num(), source_layer.blobs(j).num());
-      CHECK_EQ(target_blobs[j]->channels(), source_layer.blobs(j).channels());
-      CHECK_EQ(target_blobs[j]->height(), source_layer.blobs(j).height());
       //CHECK_EQ(target_blobs[j]->width(), source_layer.blobs(j).width());
-      if (target_blobs[j]->width() == source_layer.blobs(j).width()) {
+      if (target_blobs[j]->width() == source_layer.blobs(j).width() &&
+          target_blobs[j]->height() == source_layer.blobs(j).height() &&
+          target_blobs[j]->channels() == source_layer.blobs(j).channels() &&
+          target_blobs[j]->num() == source_layer.blobs(j).num()) {
         target_blobs[j]->FromProto(source_layer.blobs(j));
-      } else if (target_blobs[j]->width() > source_layer.blobs(j).width()) {
+      } else if (target_blobs[j]->width() > source_layer.blobs(j).width() &&
+          target_blobs[j]->height() == source_layer.blobs(j).height() &&
+          target_blobs[j]->channels() == source_layer.blobs(j).channels() &&
+          target_blobs[j]->num() == source_layer.blobs(j).num()) {
         LOG(INFO) << "### WARNING: source target dimension is less than target";
         const int num_replicates = target_blobs[j]->width()
             / source_layer.blobs(j).width();
         CHECK_EQ(target_blobs[j]->width() % source_layer.blobs(j).width(), 0);
         target_blobs[j]->FromProtoReplicate(source_layer.blobs(j), num_replicates);
+      } else if (
+          target_blobs[j]->width() * target_blobs[j]->height() *
+          target_blobs[j]->channels() * target_blobs[j]->num() ==
+          source_layer.blobs(j).width() * source_layer.blobs(j).height() *
+          source_layer.blobs(j).channels() * source_layer.blobs(j).num()) {
+        LOG(INFO) << "### WARNING: source target dimension only match by total";
+        target_blobs[j]->FromProtoDataOnly(source_layer.blobs(j));
       } else {
         CHECK(false) << "dimension mismatched";
       }

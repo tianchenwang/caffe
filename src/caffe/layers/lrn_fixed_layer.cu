@@ -183,7 +183,7 @@ void LRNFixedLayer<Dtype>::CrossChannelBackward_gpu(
   LRNFixedComputeDiff<<<CAFFE_GET_BLOCKS(n_threads), CAFFE_CUDA_NUM_THREADS>>>(
       n_threads, (*bottom)[0]->gpu_data(), top[0]->gpu_data(),
       scale_.gpu_data(), top[0]->gpu_diff(), num_, channels_, height_, width_,
-      size_, -beta_, Dtype(2. * alpha_ * beta_ / size_),
+      size_, -beta_, Dtype(2. * alpha_ * beta_),
       (*bottom)[0]->mutable_gpu_diff());
 }
 

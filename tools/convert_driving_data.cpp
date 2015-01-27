@@ -46,7 +46,7 @@ DEFINE_bool(shuffle, true,
     "Randomly shuffle the order of images and their labels");
 DEFINE_int32(width, 20, "Number of grids horizontally.");
 DEFINE_int32(height, 15, "Number of grids vertically.");
-DEFINE_int32(grid_dim, 4, "grid_dim x grid_dim number of pixels per each grid.");
+DEFINE_int32(grid_dim, 8, "grid_dim x grid_dim number of pixels per each grid.");
 DEFINE_int32(num_info_per_box, 4, "number of fields per box.");
 DEFINE_int32(resize_width, 640 + 32, "Width images are resized to");
 DEFINE_int32(resize_height, 480 + 32, "Height images are resized to");
@@ -132,6 +132,8 @@ int main(int argc, char** argv) {
   LOG(ERROR) << "Total to be processed: " << lines.size() << ".\n";
   for (int line_id = 0; line_id < lines.size(); ++line_id) {
     DrivingData data;
+    data.set_car_label_resolution(FLAGS_grid_dim);
+    data.set_car_shrink_factor(0.75);
     const string image_path = root_folder + lines[line_id].first;
     data.set_car_img_source(image_path);
     const vector<int>& bbs = lines[line_id].second;

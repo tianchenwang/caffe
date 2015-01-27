@@ -20,6 +20,7 @@ void L1LossLayer<Dtype>::Forward_gpu(const vector<Blob<Dtype>*>& bottom,
   caffe_gpu_asum(count, diff_.gpu_data(), &abs_sum);
   caffe_gpu_sign(count, diff_.gpu_data(), sign_.mutable_gpu_data());
   Dtype loss = abs_sum / bottom[0]->num();
+//  Dtype loss = abs_sum / bottom[0]->count();
   (*top)[0]->mutable_cpu_data()[0] = loss;
 }
 
@@ -30,6 +31,7 @@ void L1LossLayer<Dtype>::Backward_gpu(const vector<Blob<Dtype>*>& top,
     if (propagate_down[i]) {
       const Dtype sign = (i == 0) ? 1 : -1;
       const Dtype alpha = sign * top[0]->cpu_diff()[0] / (*bottom)[i]->num();
+//      const Dtype alpha = sign * top[0]->cpu_diff()[0] / (*bottom)[i]->count();
       caffe_gpu_axpby(
           (*bottom)[i]->count(),              // count
           alpha,                              // alpha
