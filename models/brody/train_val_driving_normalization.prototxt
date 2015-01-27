@@ -118,7 +118,7 @@ layers {
   bottom: "data"
   top: "L0"
   blobs_lr: 1
-  blobs_lr: 2
+  blobs_lr: 1
   weight_decay: 1
   weight_decay: 0
   convolution_param {
@@ -169,7 +169,7 @@ layers {
   bottom: "pool1"
   top: "L1"
   blobs_lr: 1
-  blobs_lr: 2
+  blobs_lr: 1
   weight_decay: 1
   weight_decay: 0
   convolution_param {
@@ -221,7 +221,7 @@ layers {
   bottom: "pool2"
   top: "L2"
   blobs_lr: 1
-  blobs_lr: 2
+  blobs_lr: 1
   weight_decay: 1
   weight_decay: 0
   convolution_param {
@@ -250,7 +250,7 @@ layers {
   bottom: "L2"
   top: "L3"
   blobs_lr: 1
-  blobs_lr: 2
+  blobs_lr: 1
   weight_decay: 1
   weight_decay: 0
   convolution_param {
@@ -280,7 +280,7 @@ layers {
   bottom: "L3"
   top: "L4"
   blobs_lr: 1
-  blobs_lr: 2
+  blobs_lr: 1
   weight_decay: 1
   weight_decay: 0
   convolution_param {
@@ -322,7 +322,7 @@ layers {
   bottom: "pool5"
   top: "L5"
   blobs_lr: 1
-  blobs_lr: 2
+  blobs_lr: 1
   weight_decay: 1
   weight_decay: 0
   convolution_param {
@@ -360,7 +360,7 @@ layers {
   bottom: "L5"
   top: "L6"
   blobs_lr: 1
-  blobs_lr: 2
+  blobs_lr: 1
   weight_decay: 1
   weight_decay: 0
   convolution_param {
@@ -398,7 +398,7 @@ layers {
   bottom: "L6"
   top: "bb-output"
   blobs_lr: 1
-  blobs_lr: 2
+  blobs_lr: 1
   weight_decay: 1
   weight_decay: 0
   convolution_param {
@@ -406,11 +406,11 @@ layers {
     kernel_size: 1
     weight_filler {
       type: "gaussian"
-      std: 0.005
+      std: 0.01
     }
     bias_filler {
       type: "constant"
-      value: 1.0
+      value: 0.0
     }
   }
 }
@@ -421,7 +421,7 @@ layers {
   bottom: "L6"
   top: "pixel-conv"
   blobs_lr: 1
-  blobs_lr: 2
+  blobs_lr: 1
   weight_decay: 1
   weight_decay: 0
   convolution_param {
@@ -429,11 +429,11 @@ layers {
     kernel_size: 1
     weight_filler {
       type: "gaussian"
-      std: 0.005
+      std: 0.01
     }
     bias_filler {
       type: "constant"
-      value: 1.0
+      value: 0.0
     }
   }
 }
