@@ -148,7 +148,7 @@ int main(int argc, char** argv) {
       box->set_img_height(resize_height);
     }
     if (!ReadImageToDatum(image_path, 0,
-        resize_height, resize_width, is_color, data.mutable_car_image_datum())) {
+        resize_height, resize_width, is_color, data.mutable_car_image_datum(), FLAGS_use_rgb)) {
       continue;
     }
 
