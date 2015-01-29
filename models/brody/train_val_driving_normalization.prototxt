@@ -120,7 +120,7 @@ layers {
   blobs_lr: 1
   blobs_lr: 1
   weight_decay: 1
-  weight_decay: 0
+  weight_decay: 1
   convolution_param {
     num_output: 96
     kernel_size: 11
@@ -171,7 +171,7 @@ layers {
   blobs_lr: 1
   blobs_lr: 1
   weight_decay: 1
-  weight_decay: 0
+  weight_decay: 1
   convolution_param {
     num_output: 256
     pad: 2
@@ -223,7 +223,7 @@ layers {
   blobs_lr: 1
   blobs_lr: 1
   weight_decay: 1
-  weight_decay: 0
+  weight_decay: 1
   convolution_param {
     num_output: 384
     pad: 1
@@ -252,7 +252,7 @@ layers {
   blobs_lr: 1
   blobs_lr: 1
   weight_decay: 1
-  weight_decay: 0
+  weight_decay: 1
   convolution_param {
     num_output: 384
     pad: 1
@@ -282,7 +282,7 @@ layers {
   blobs_lr: 1
   blobs_lr: 1
   weight_decay: 1
-  weight_decay: 0
+  weight_decay: 1
   convolution_param {
     num_output: 384
     pad: 1
@@ -324,7 +324,7 @@ layers {
   blobs_lr: 1
   blobs_lr: 1
   weight_decay: 1
-  weight_decay: 0
+  weight_decay: 1
   convolution_param {
     num_output: 4096
     kernel_size: 6
@@ -362,7 +362,7 @@ layers {
   blobs_lr: 1
   blobs_lr: 1
   weight_decay: 1
-  weight_decay: 0
+  weight_decay: 1
   convolution_param {
     num_output: 4096
     kernel_size: 1
@@ -400,7 +400,7 @@ layers {
   blobs_lr: 1
   blobs_lr: 1
   weight_decay: 1
-  weight_decay: 0
+  weight_decay: 1
   convolution_param {
     num_output: 256
     kernel_size: 1
@@ -423,7 +423,7 @@ layers {
   blobs_lr: 1
   blobs_lr: 1
   weight_decay: 1
-  weight_decay: 0
+  weight_decay: 1
   convolution_param {
     num_output: 128
     kernel_size: 1
