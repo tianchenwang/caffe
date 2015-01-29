@@ -8,7 +8,7 @@ layers {
   video_data_param {
     source: "/scail/group/deeplearning/driving_data/twangcat/schedules/q50_multilane_planar_train_schedule1_batch40_2cam.txt"
     batch_size: 40
-    rand_skip: 78000
+    rand_skip: 38000
   }
   transform_param {
     mean_file: "driving_img_mean.binaryproto"
@@ -24,7 +24,7 @@ layers {
   multilane_label_param {
     source: "/scail/group/deeplearning/driving_data/twangcat/schedules/q50_multilane_planar_train_schedule1_batch40_2cam.txt"
     batch_size: 40
-    rand_skip: 78000
+    rand_skip: 38000
   }
   include: { phase: TRAIN }
 }
