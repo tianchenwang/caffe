@@ -21,11 +21,11 @@ def main(argv):
   mean_data = np.array(mean_data.data)
   print mean_data.shape
   mean_img = mean_data.reshape([3, 480, 640])
-#  mean_img = mean_img[(2, 1, 0), :, :]
-#  np.save(open('new_driving_mean.npy', 'wb'), mean_img)
+  mean_img = mean_img[(2, 1, 0), :, :]
+  np.save(open('driving_mean_640x480_rgb.npy', 'wb'), mean_img)
 
   mean_img = np.transpose(mean_img, (1, 2, 0))
-  Image.fromarray(mean_img.astype('uint8')).save('test_mean.png')
+  Image.fromarray(mean_img.astype('uint8')).save('driving_mean_640x480_rgb.png')
 
   """
   real_img = caffe.io.load_image( \

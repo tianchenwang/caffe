@@ -89,11 +89,9 @@ inline void WriteProtoToBinaryFile(
   WriteProtoToBinaryFile(proto, filename.c_str());
 }
 
-bool ReadBBLabelToDatum(const vector<int>& bbs, const int width, const int height,
-    const int grid_dim, float scaling, Datum* datum);
-
 bool ReadImageToDatum(const string& filename, const int label,
-    const int height, const int width, const bool is_color, Datum* datum);
+    const int height, const int width, const bool is_color, Datum* datum,
+    const bool use_rgb = false);
 
 inline bool ReadImageToDatum(const string& filename, const int label,
     const int height, const int width, Datum* datum) {

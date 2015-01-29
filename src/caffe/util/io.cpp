@@ -66,63 +66,10 @@ void WriteProtoToBinaryFile(const Message& proto, const char* filename) {
   CHECK(proto.SerializeToOstream(&output));
 }
 
-bool ReadBBLabelToDatum(const vector<int>& bbs, const int width, const int height,
-    const int grid_dim, const float scaling, Datum* datum) {
-  // 1 pixel label, 4 bounding box coordinates.
-  vector<cv::Mat *> labels;
-  for (int i = 0; i < 5; ++i) {
-    labels.push_back(new cv::Mat(height * grid_dim, width * grid_dim,
-        CV_32F, cv::Scalar(0.0)));
-  }
-
-  for (int i = 0; i < bbs.size(); i += 4) {
-    float xmin = bbs[i];
-    float ymin = bbs[i + 1];
-    float xmax = bbs[i + 2];
-    float ymax = bbs[i + 3];
-    float width = xmax - xmin;
-    float height = ymax - ymin;
-
-    int gxmin = cvRound((xmin + width / 4) * scaling);
-    int gxmax = cvRound((xmax - width / 4) * scaling);
-    int gymin = cvRound((ymin + height / 4) * scaling);
-    int gymax = cvRound((ymax - height / 4) * scaling);
-
-    cv::Rect r(gxmin, gymin, gxmax, gymax);
-    float flabels[5] = {1.0, xmin, ymin, xmax, ymax};
-    for (int j = 0; j < 5; ++j) {
-      cv::Mat roi(*labels[j], r);
-      roi = cv::Scalar(flabels[j]);
-    }
-  }
-
-  datum->set_channels(5 * grid_dim * grid_dim);
-  datum->set_height(height);
-  datum->set_width(width);
-  datum->clear_data();
-  datum->clear_float_data();
-
-  for (int m = 0; m < 5; ++m) {
-    for (int dy = 0; dy < grid_dim; ++dy) {
-      for (int dx = 0; dx < grid_dim; ++dx) {
-        for (int y = 0; y < height; y += grid_dim) {
-          for (int x = 0; x < width; x += grid_dim) {
-            datum->add_float_data(labels[m]->at<float>(y + dy, x + dx));
-          }
-        }
-      }
-    }
-  }
-
-  for (int i = 0; i < 5; ++i) {
-    delete labels[i];
-  }
-
-  return true;
-}
 
 bool ReadImageToDatum(const string& filename, const int label,
-    const int height, const int width, const bool is_color, Datum* datum) {
+    const int height, const int width, const bool is_color, Datum* datum,
+    const bool use_rgb) {
   cv::Mat cv_img;
   int cv_read_flag = (is_color ? CV_LOAD_IMAGE_COLOR :
     CV_LOAD_IMAGE_GRAYSCALE);
@@ -148,10 +95,11 @@ bool ReadImageToDatum(const string& filename, const int label,
   string* datum_string = datum->mutable_data();
   if (is_color) {
     for (int c = 0; c < num_channels; ++c) {
+      int channel = use_rgb ? 2 - c : c;
       for (int h = 0; h < cv_img.rows; ++h) {
         for (int w = 0; w < cv_img.cols; ++w) {
           datum_string->push_back(
-            static_cast<char>(cv_img.at<cv::Vec3b>(h, w)[c]));
+            static_cast<char>(cv_img.at<cv::Vec3b>(h, w)[channel]));
         }
       }
     }

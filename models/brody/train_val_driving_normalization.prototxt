@@ -7,12 +7,12 @@ layers {
   top: "data"
   top: "label"
   data_param {
-    source: "new_driving_train"
+    source: "driving_train_rgb"
     backend: LMDB
     batch_size: 10
   }
   transform_param {
-    mean_file: "driving_mean.binaryproto"
+    mean_file: "driving_mean_rgb.binaryproto"
   }
   include: { phase: TRAIN }
 }
@@ -24,12 +24,12 @@ layers {
   top: "data"
   top: "label"
   data_param {
-    source: "new_driving_test"
+    source: "driving_test_rgb"
     backend: LMDB
     batch_size: 10
   }
   transform_param {
-    mean_file: "driving_mean.binaryproto"
+    mean_file: "driving_mean_rgb.binaryproto"
   }
   include: { phase: TEST }
 }
@@ -509,55 +509,3 @@ layers {
   top: "bb-loss"
   loss_weight: 10.0
 }
-
-# L1 error loss
-#layers {
-#  name: "bb-diff"
-#  type: ELTWISE
-#  bottom: "bb-masked-output"
-#  bottom: "bb-label"
-#  eltwise_param {
-#    operation: SUM
-#    coeff: 1.0
-#    coeff: -1.0
-#  }
-#  top: "bb-diff"
-#}
-
-#layers {
-#  name: "bb-loss"
-#  type: ABSVAL
-#  bottom: "bb-diff"
-#  top: "bb-loss"
-#  # 1 / (20 * 15 * 64)
-#  loss_weight: 0.00000000001
-#}
-
-#layers {
-#  name: "bb-loss-pow2"
-#  type: POWER
-#  bottom: "bb-diff"
-#  top: "bb-loss-pow2"
-#  # 1 / (20 * 15 * 64)
-#  power_param {
-#    power: 2
-#  }
-#}
-
-#layers {
-#  name: "bb-loss-height-normalize"
-#  type: ELTWISE
-#  bottom: "bb-loss-pow2"
-#  bottom: "height-block"
-#  eltwise_param {
-#    operation: PROD
-#  }
-#  top: "bb-loss"
-#  loss_weight: 0.1
-#}
-
-#layers {
-#  name: "bb-loss-silence"
-#  type: SILENCE
-#  bottom: "bb-loss"
-#}
