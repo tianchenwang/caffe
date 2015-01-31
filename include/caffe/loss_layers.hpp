@@ -798,7 +798,7 @@ class L1LossLayer : public LossLayer<Dtype> {
       vector<Blob<Dtype>*>* top);
 
   virtual inline LayerParameter_LayerType type() const {
-    return LayerParameter_LayerType_EUCLIDEAN_LOSS;
+    return LayerParameter_LayerType_L1_LOSS;
   }
 
   /**
