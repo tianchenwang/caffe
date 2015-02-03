@@ -7,12 +7,12 @@ layers {
   top: "data"
   top: "label"
   data_param {
-    source: "driving_train_rgb"
+    source: "/deep/u/willsong/caffe/driving_train_rgb"
     backend: LMDB
     batch_size: 10
   }
   transform_param {
-    mean_file: "driving_mean_rgb.binaryproto"
+    mean_file: "/deep/u/willsong/caffe/driving_mean_rgb.binaryproto"
   }
   include: { phase: TRAIN }
 }
@@ -24,12 +24,12 @@ layers {
   top: "data"
   top: "label"
   data_param {
-    source: "driving_test_rgb"
+    source: "/deep/u/willsong/caffe/driving_test_rgb"
     backend: LMDB
     batch_size: 10
   }
   transform_param {
-    mean_file: "driving_mean_rgb.binaryproto"
+    mean_file: "/deep/u/willsong/caffe/driving_mean_rgb.binaryproto"
   }
   include: { phase: TEST }
 }
