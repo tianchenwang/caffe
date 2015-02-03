@@ -28,6 +28,7 @@
 
 # build, distribute, and bins
 build
+debug
 .build_debug/*
 .build_release/*
 distribute/*
@@ -36,7 +37,7 @@ distribute/*
 python/caffe/proto/
 
 # Editor temporaries
-*.sw?
+*.swp
 *~
 
 # IPython notebook checkpoints
