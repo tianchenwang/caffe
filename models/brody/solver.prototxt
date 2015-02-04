@@ -11,5 +11,5 @@ max_iter: 1450000
 momentum: 0.9
 weight_decay: 0.00005
 snapshot: 10000
-snapshot_prefix: "models/brody/test_test"
+snapshot_prefix: "models/brody/snapshots/test_test"
 solver_mode: GPU

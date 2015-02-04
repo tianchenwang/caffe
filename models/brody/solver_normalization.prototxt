@@ -11,5 +11,5 @@ max_iter: 1450000
 momentum: 0.9
 weight_decay: 0.0005
 snapshot: 1000
-snapshot_prefix: "models/brody/driving_normalization_nl"
+snapshot_prefix: "models/brody/snapshots/driving_normalization_nl"
 solver_mode: GPU
