@@ -509,7 +509,7 @@ void SGDSolver<Dtype>::ComputeUpdateValue() {
           LOG(FATAL) << "Unknown regularization type: " << regularization_type;
         }
       }
-
+      // up = lr*dr + m*h_0
       caffe_gpu_axpby(net_params[param_id]->count(), local_rate,
                 net_params[param_id]->gpu_diff(), momentum,
                 history_[param_id]->mutable_gpu_data());
@@ -592,11 +592,15 @@ void NesterovSolver<Dtype>::ComputeUpdateValue() {
       }
 
       // update history
+      // h_1 = lr * df + m * h_0
       caffe_cpu_axpby(net_params[param_id]->count(), local_rate,
                 net_params[param_id]->cpu_diff(), momentum,
                 this->history_[param_id]->mutable_cpu_data());
 
-      // compute udpate: step back then over step
+      // compute update: step back then over step
+      // up = (1 + m)*h_1 - m*h_0 = lr * df + m * h_0 + m*h_1 - m*h_0
+      // up = lr * df + m*h_1 = lr*df + m*lr*df + m^2*h_0
+      // up = (1+m)*lr*df + m^2*h_0
       caffe_cpu_axpby(net_params[param_id]->count(), Dtype(1) + momentum,
           this->history_[param_id]->cpu_data(), -momentum,
           this->update_[param_id]->mutable_cpu_data());
