@@ -58,6 +58,7 @@ class UniformFiller : public Filler<Dtype> {
         Dtype(this->filler_param_.max()), blob->mutable_cpu_data());
     CHECK_EQ(this->filler_param_.sparse(), -1)
          << "Sparsity not supported by this Filler.";
+    blob->BcastData();
   }
 };
 
@@ -90,6 +91,7 @@ class GaussianFiller : public Filler<Dtype> {
         data[i] *= mask[i];
       }
     }
+    blob->BcastData();
   }
 
  protected:
@@ -123,6 +125,7 @@ class PositiveUnitballFiller : public Filler<Dtype> {
     }
     CHECK_EQ(this->filler_param_.sparse(), -1)
          << "Sparsity not supported by this Filler.";
+    blob->BcastData();
   }
 };
 
@@ -154,6 +157,7 @@ class XavierFiller : public Filler<Dtype> {
         blob->mutable_cpu_data());
     CHECK_EQ(this->filler_param_.sparse(), -1)
          << "Sparsity not supported by this Filler.";
+    blob->BcastData();
   }
 };
 

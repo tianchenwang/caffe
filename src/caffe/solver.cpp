@@ -181,11 +181,13 @@ void Solver<Dtype>::Solve(const char* resume_file) {
   // For a network that is trained by the solver, no bottom or top vecs
   // should be given, and we will just provide dummy vecs.
   vector<Blob<Dtype>*> bottom_vec;
+  SyncData();
   for (; iter_ < param_.max_iter(); ++iter_) {
     // Save a snapshot if needed.
     if (param_.snapshot() && iter_ > start_iter &&
         iter_ % param_.snapshot() == 0) {
-      Snapshot();
+      SyncData();
+      if (Caffe::mpi()->rank() == 0) { Snapshot(); }
     }
 
     if (param_.test_interval() && iter_ % param_.test_interval() == 0
@@ -228,12 +230,16 @@ void Solver<Dtype>::Solve(const char* resume_file) {
       }
     }
 
+    SyncDiff();
     ComputeUpdateValue();
     net_->Update();
   }
   // Always save a snapshot after optimization, unless overridden by setting
   // snapshot_after_train := false.
-  if (param_.snapshot_after_train()) { Snapshot(); }
+  if (param_.snapshot_after_train()) {
+    SyncData();
+    if (Caffe::mpi()->rank() == 0) { Snapshot(); }
+  }
   // After the optimization is done, run an additional train and test pass to
   // display the train and test loss/outputs if appropriate (based on the
   // display and test_interval settings, respectively).  Unlike in the rest of
@@ -430,6 +436,25 @@ void SGDSolver<Dtype>::PreSolve() {
     temp_.push_back(shared_ptr<Blob<Dtype> >(new Blob<Dtype>(
         net_param->num(), net_param->channels(), net_param->height(),
         net_param->width())));
+  }
+}
+
+
+template <typename Dtype>
+void SGDSolver<Dtype>::SyncData() {
+  vector<shared_ptr<Blob<Dtype> > >& net_params = this->net_->params();
+  for (int param_id = 0; param_id < net_params.size(); ++param_id) {
+    net_params[param_id]->SyncData();
+    history_[param_id]->SyncData();
+  }
+}
+
+
+template <typename Dtype>
+void SGDSolver<Dtype>::SyncDiff() {
+  vector<shared_ptr<Blob<Dtype> > >& net_params = this->net_->params();
+  for (int param_id = 0; param_id < net_params.size(); ++param_id) {
+    net_params[param_id]->SyncDiff();
   }
 }
 

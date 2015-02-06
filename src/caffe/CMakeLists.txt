@@ -58,8 +58,15 @@ include_directories(${LMDB_INCLUDE_DIR})
 
 #    Boost
 find_package(Boost 1.46 COMPONENTS system thread REQUIRED)
-include_directories( ${Boost_INCLUDE_DIR} )
-link_directories( ${Boost_LIBRARY_DIRS} )
+include_directories(${Boost_INCLUDE_DIR})
+link_directories(${Boost_LIBRARY_DIRS})
+
+# MPI
+if (USE_MPI)
+  add_definitions(-DUSE_MPI)
+  find_package(MPI REQUIRED)
+  include_directories(${MPI_INCLUDE_PATH})
+endif()
 
 add_subdirectory(proto)
 
@@ -121,6 +128,7 @@ target_link_libraries(caffe proto
         ${LEVELDB_LIBS}
         ${LMDB_LIBRARIES}
         ${OpenCV_LIBS}
+        ${MPI_LIBRARIES}
 )
 
 #set output directory
