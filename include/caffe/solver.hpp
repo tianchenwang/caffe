@@ -36,6 +36,10 @@ class Solver {
   // PreSolve is run before any solving iteration starts, allowing one to
   // put up some scaffold.
   virtual void PreSolve() {}
+  // Sync net parameters & any solver data
+  virtual void SyncData() = 0;
+  // Sync gradients
+  virtual void SyncDiff() = 0;
   // Get the update value for the current iteration.
   virtual void ComputeUpdateValue() = 0;
   // The Solver::Snapshot function implements the basic snapshotting utility
@@ -80,6 +84,8 @@ class SGDSolver : public Solver<Dtype> {
  protected:
   virtual void PreSolve();
   Dtype GetLearningRate();
+  virtual void SyncDiff();
+  virtual void SyncData();
   virtual void ComputeUpdateValue();
   virtual void SnapshotSolverState(SolverState * state);
   virtual void RestoreSolverState(const SolverState& state);

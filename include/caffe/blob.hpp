@@ -128,6 +128,25 @@ class Blob {
    */
   void ShareDiff(const Blob& other);
 
+  /**
+   * @brief Averages the data buffers of all the nodes using
+   * MPI. Performs an AllReduce followed by an averaging.
+   */
+  void SyncData();
+  /**
+   * @brief Averages the diff buffers of all the nodes using
+   * MPI. Performs an AllReduce followed by an averaging.
+   */
+  void SyncDiff();
+
+  /**
+   * @brief Uses a single rank to broadcast their data to all the
+   * other nodes. Only the rank specifed keeps their data every other
+   * rank's data is replaced. Currently just uses cpu due to its usage
+   * case being in filler.
+   */
+  void BcastData(const int rank = 0);
+
  protected:
   shared_ptr<SyncedMemory> data_;
   shared_ptr<SyncedMemory> diff_;

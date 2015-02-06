@@ -4,6 +4,7 @@
 
 #include "caffe/common.hpp"
 #include "caffe/util/rng.hpp"
+#include "caffe/util/mpi.hpp"
 
 namespace caffe {
 
@@ -35,12 +36,19 @@ void GlobalInit(int* pargc, char*** pargv) {
   ::gflags::ParseCommandLineFlags(pargc, pargv, true);
   // Google logging.
   ::google::InitGoogleLogging(*(pargv)[0]);
+  // Setup MPI before logging in case we change log dirs
+  caffe_init_mpi(pargc, pargv);
+}
+
+void GlobalFinalize() {
+  caffe_finalize_mpi();
 }
 
 #ifdef CPU_ONLY  // CPU-only Caffe.
 
 Caffe::Caffe()
-    : random_generator_(), mode_(Caffe::CPU), phase_(Caffe::TRAIN) { }
+  : random_generator_(), mode_(Caffe::CPU), phase_(Caffe::TRAIN),
+    device_state_(Caffe::MUTABLE) { }
 
 Caffe::~Caffe() { }
 
@@ -84,7 +92,7 @@ void* Caffe::RNG::generator() {
 
 Caffe::Caffe()
     : cublas_handle_(NULL), curand_generator_(NULL), random_generator_(),
-    mode_(Caffe::CPU), phase_(Caffe::TRAIN) {
+      mode_(Caffe::CPU), phase_(Caffe::TRAIN), device_state_(Caffe::MUTABLE) {
   // Try to create a cublas handler, and report an error if failed (but we will
   // keep the program running as one might just want to run CPU code).
   if (cublasCreate(&cublas_handle_) != CUBLAS_STATUS_SUCCESS) {
@@ -127,7 +135,7 @@ void Caffe::set_random_seed(const unsigned int seed) {
 void Caffe::SetDevice(const int device_id) {
   int current_device;
   CUDA_CHECK(cudaGetDevice(&current_device));
-  if (current_device == device_id) {
+  if (current_device == device_id || Caffe::device_state() == Caffe::FIXED) {
     return;
   }
   // The call to cudaSetDevice must come before any calls to Get, which
@@ -177,6 +185,18 @@ void Caffe::DeviceQuery() {
   LOG(INFO) << "Kernel execution timeout:      "
       << (prop.kernelExecTimeoutEnabled ? "Yes" : "No");
   return;
+}
+
+
+size_t Caffe::DeviceMemoryFree() {
+  int device;
+  if (cudaSuccess != cudaGetDevice(&device)) {
+    printf("No cuda device present.\n");
+    return 0;
+  }
+  size_t free, total;
+  CUDA_CHECK(cudaMemGetInfo(&free, &total));
+  return free;
 }
 
 

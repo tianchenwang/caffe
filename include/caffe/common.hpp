@@ -16,6 +16,7 @@
 #include <vector>
 
 #include "caffe/util/device_alternate.hpp"
+#include "caffe/util/mpi.hpp"
 
 // gflags 2.1 issue: namespace google was changed to gflags without warning.
 // Luckily we will be able to use GFLAGS_GFAGS_H_ to detect if it is version
@@ -62,8 +63,12 @@ using std::stringstream;
 using std::vector;
 
 // A global initialization function that you should call in your main function.
-// Currently it initializes google flags and google logging.
+// Currently it initializes google flags, google logging, and MPI.
 void GlobalInit(int* pargc, char*** pargv);
+
+// A global finalization function that you should call at the end of
+// your main function.
+void GlobalFinalize();
 
 // A singleton class to hold common caffe stuff, such as the handler that
 // caffe is going to use for cublas, curand, etc.
@@ -78,7 +83,7 @@ class Caffe {
   }
   enum Brew { CPU, GPU };
   enum Phase { TRAIN, TEST };
-
+  enum DeviceState { FIXED, MUTABLE };
 
   // This random number generator facade hides boost and CUDA rng
   // implementation from one another (for cross-platform compatibility).
@@ -112,6 +117,10 @@ class Caffe {
   inline static Brew mode() { return Get().mode_; }
   // Returns the phase: TRAIN or TEST.
   inline static Phase phase() { return Get().phase_; }
+  // Returns the MPI implementation
+  inline static shared_ptr<MPI> mpi() { return Get().mpi_; }
+  // Returns the DeviceState: MUTABLE or FIXED
+  inline static DeviceState device_state() { return Get().device_state_; }
   // The setters for the variables
   // Sets the mode. It is recommended that you don't change the mode halfway
   // into the program since that may cause allocation of pinned memory being
@@ -120,6 +129,10 @@ class Caffe {
   inline static void set_mode(Brew mode) { Get().mode_ = mode; }
   // Sets the phase.
   inline static void set_phase(Phase phase) { Get().phase_ = phase; }
+  inline static void set_mpi(shared_ptr<MPI> mpi) { Get().mpi_ = mpi; }
+  inline static void set_device_state(DeviceState device_state) {
+    Get().device_state_ = device_state;
+  }
   // Sets the random seed of both boost and curand
   static void set_random_seed(const unsigned int seed);
   // Sets the device. Since we have cublas and curand stuff, set device also
@@ -127,6 +140,8 @@ class Caffe {
   static void SetDevice(const int device_id);
   // Prints the current GPU status.
   static void DeviceQuery();
+  // Returns the number of free bytes on GPU
+  static size_t DeviceMemoryFree();
 
  protected:
 #ifndef CPU_ONLY
@@ -134,9 +149,11 @@ class Caffe {
   curandGenerator_t curand_generator_;
 #endif
   shared_ptr<RNG> random_generator_;
+  shared_ptr<MPI> mpi_;
 
   Brew mode_;
   Phase phase_;
+  DeviceState device_state_;
   static shared_ptr<Caffe> singleton_;
 
  private:

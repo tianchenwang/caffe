@@ -3,6 +3,8 @@
 #include <algorithm>
 #include <string>
 #include <vector>
+#include <iostream>     // std::cout, std::ios
+#include <sstream>
 
 #include "caffe/net.hpp"
 #include "caffe/proto/caffe.pb.h"
@@ -11,14 +13,10 @@
 #include "caffe/util/math_functions.hpp"
 #include "caffe/util/upgrade_proto.hpp"
 
-
-#include <opencv2/core/core.hpp>
-#include <opencv2/highgui/highgui.hpp>
-#include <opencv2/highgui/highgui_c.h>
-#include <opencv2/imgproc/imgproc.hpp>
-#include <iostream>     // std::cout, std::ios
-#include <sstream>
-
+#include <opencv2/core/core.hpp> // NOLINT
+#include <opencv2/highgui/highgui.hpp> // NOLINT
+#include <opencv2/highgui/highgui_c.h> // NOLINT
+#include <opencv2/imgproc/imgproc.hpp> // NOLINT
 
 
 namespace caffe {
@@ -182,11 +180,13 @@ void Solver<Dtype>::Solve(const char* resume_file) {
   // For a network that is trained by the solver, no bottom or top vecs
   // should be given, and we will just provide dummy vecs.
   vector<Blob<Dtype>*> bottom_vec;
+  SyncData();
   for (; iter_ < param_.max_iter(); ++iter_) {
     // Save a snapshot if needed.
     if (param_.snapshot() && iter_ > start_iter &&
         iter_ % param_.snapshot() == 0) {
-      Snapshot();
+      SyncData();
+      if (Caffe::mpi()->rank() == 0) { Snapshot(); }
     }
 
     if (param_.test_interval() && iter_ % param_.test_interval() == 0
@@ -200,108 +200,6 @@ void Solver<Dtype>::Solve(const char* resume_file) {
     if (display) {
       LOG(INFO) << "Iteration " << iter_ << ", loss = " << loss;
       const vector<Blob<Dtype>*>& result = net_->output_blobs();
-
-      //added by Tao. for debugging purpose only
-      /*
-      const vector<string>& blob_names = net_->blob_names();
-      const vector<shared_ptr<Blob<Dtype> > >& blobs = net_->blobs();
-      string str1("data");
-      string str2("label");
-      string str3("pixel-label");
-      string str4("bb-label");
-      string save_dir("/scr/twangcat/caffenet_results/train/");
-      vector<cv::Mat> save_imgs;
-      int quad_height;
-      int quad_width;
-      int batch_size;
-      const Dtype* pix_start;
-      const Dtype* bb_start;
-      for (int j = 0; j < blobs.size(); ++j) {
-        if(blob_names[j].compare(str3)==0) //pixel label
-        {
-          LOG(INFO) << "pixel-label " << blobs[j]->num()<<" "<<blobs[j]->channels()<<" "<<blobs[j]->height()<<" "<<blobs[j]->width();
-          pix_start = blobs[j]->cpu_data();
-          quad_height = blobs[j]->height();
-          quad_width = blobs[j]->width();
-          batch_size = blobs[j]->num();
-        }
-        if(blob_names[j].compare(str4)==0) // bb label
-        {
-          LOG(INFO) << "bb-label " << blobs[j]->num()<<" "<<blobs[j]->channels()<<" "<<blobs[j]->height()<<" "<<blobs[j]->width();
-          bb_start = blobs[j]->cpu_data();
-        }
-        if(blob_names[j].compare(str1)==0) // actual image
-        {
-          LOG(INFO) << "data " << blobs[j]->num()<<" "<<blobs[j]->channels()<<" "<<blobs[j]->height()<<" "<<blobs[j]->width();
-          const Dtype* data_start = blobs[j]->cpu_data();
-          for(int n=0; n<blobs[j]->num(); ++n)
-          {
-            cv::Mat curr_img = cv::Mat(blobs[j]->height(), blobs[j]->width(), CV_32FC3, cv::Scalar(0,0,255));
-            for(int kk=0; kk<blobs[j]->channels();++kk)
-            {
-              for(int yy=0; yy<blobs[j]->height();++yy)
-              {
-                for(int xx=0; xx<blobs[j]->width();++xx)
-                {
-                  curr_img.at<cv::Vec3f>(yy,xx)[kk]=*(data_start+(((n*blobs[j]->channels() + kk) * blobs[j]->height() + yy) * blobs[j]->width() + xx));
-                }
-              }
-            }
-            save_imgs.push_back(curr_img);
-          }
-        }
-      }
-      int grid_dim=4;
-      int label_count = 0;
-      int label_height = quad_height*grid_dim;
-      int label_width = quad_width*grid_dim;
-      Dtype scaling = 1.0/8;
-      for(int n=0; n<batch_size; ++n){
-        int image_id = this->iter_*5+n;
-        cv::Mat save_img = save_imgs[n];
-        std::ostringstream stringStream;
-        stringStream <<save_dir<< "img"<<image_id<<".png";
-        std::string save_name = stringStream.str();
-        for (int z=0; z<16;++z){
-          for (int qy = 0; qy < quad_height; ++qy) {
-            for (int qx = 0; qx < quad_width; ++qx) {
-              int dx = z%grid_dim;
-              int dy = z/grid_dim;
-              int x = qx*grid_dim+dx;
-              int y = qy*grid_dim+dy;
-              if (*(pix_start+(((n*16+z)*quad_height+qy)*quad_width+qx)) <0.5) {
-                // do nothing
-              } else{
-
-                save_img.at<cv::Vec3f>(y/scaling,x/scaling) = cv::Vec3f(0,255,0);
-                save_img.at<cv::Vec3f>(y/scaling-1,x/scaling-1) = cv::Vec3f(0,255,0);
-                save_img.at<cv::Vec3f>(y/scaling+1,x/scaling-1) = cv::Vec3f(0,255,0);
-                save_img.at<cv::Vec3f>(y/scaling-1,x/scaling+1) = cv::Vec3f(0,255,0);
-                save_img.at<cv::Vec3f>(y/scaling+1,x/scaling+1) = cv::Vec3f(0,255,0);
-
-                float x_adj = (qx*grid_dim + grid_dim / 2) / scaling;
-                float y_adj = (qy*grid_dim + grid_dim / 2) / scaling;
-                //std::cout<<*(bb_start+(((n*64+z)*quad_height+qy)*quad_width+qx))<<" ";
-                //std::cout<<*(bb_start+(((n*64+z+16)*quad_height+qy)*quad_width+qx))<<" ";
-                //std::cout<<*(bb_start+(((n*64+z+32)*quad_height+qy)*quad_width+qx))<<" ";
-                //std::cout<<*(bb_start+(((n*64+z+48)*quad_height+qy)*quad_width+qx))<<std::endl;
-                int x_min = *(bb_start+(((n*64+z)*quad_height+qy)*quad_width+qx))+x_adj;
-                int y_min = *(bb_start+(((n*64+z+16)*quad_height+qy)*quad_width+qx))+y_adj;
-                int x_max = *(bb_start+(((n*64+z+32)*quad_height+qy)*quad_width+qx))+x_adj;
-                int y_max = *(bb_start+(((n*64+z+48)*quad_height+qy)*quad_width+qx))+y_adj;
-                //cv::Rect bb(x_min, y_min, x_max-x_min+1, y_max-y_min+1);
-                //cv::rectangle(save_img, bb, cv::Scalar(100, 100, 200), 2);
-                cv::Point p1(x_min, y_min);
-                cv::Point p2(x_max, y_max);
-                cv::line(save_img,p1,p2,cv::Scalar(100, 100, 200), 2);
-              }
-            }
-          }
-          cv::imwrite(save_name, save_img);
-        }
-      }
-      */
-      //end
       int score_index = 0;
       for (int j = 0; j < result.size(); ++j) {
         const Dtype* result_vec = result[j]->cpu_data();
@@ -325,11 +223,15 @@ void Solver<Dtype>::Solve(const char* resume_file) {
     }
 
     ComputeUpdateValue();
+    SyncDiff();
     net_->Update();
   }
   // Always save a snapshot after optimization, unless overridden by setting
   // snapshot_after_train := false.
-  if (param_.snapshot_after_train()) { Snapshot(); }
+  if (param_.snapshot_after_train()) {
+    SyncData();
+    if (Caffe::mpi()->rank() == 0) { Snapshot(); }
+  }
   // After the optimization is done, run an additional train and test pass to
   // display the train and test loss/outputs if appropriate (based on the
   // display and test_interval settings, respectively).  Unlike in the rest of
@@ -510,6 +412,25 @@ void SGDSolver<Dtype>::PreSolve() {
     temp_.push_back(shared_ptr<Blob<Dtype> >(new Blob<Dtype>(
         net_param->num(), net_param->channels(), net_param->height(),
         net_param->width())));
+  }
+}
+
+
+template <typename Dtype>
+void SGDSolver<Dtype>::SyncData() {
+  vector<shared_ptr<Blob<Dtype> > >& net_params = this->net_->params();
+  for (int param_id = 0; param_id < net_params.size(); ++param_id) {
+    net_params[param_id]->SyncData();
+    history_[param_id]->SyncData();
+  }
+}
+
+
+template <typename Dtype>
+void SGDSolver<Dtype>::SyncDiff() {
+  vector<shared_ptr<Blob<Dtype> > >& net_params = this->net_->params();
+  for (int param_id = 0; param_id < net_params.size(); ++param_id) {
+    net_params[param_id]->SyncDiff();
   }
 }
 

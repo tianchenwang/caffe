@@ -279,9 +279,12 @@ int main(int argc, char** argv) {
       "  time            benchmark model execution time");
   // Run tool or show usage.
   caffe::GlobalInit(&argc, &argv);
+  int result = 0;
   if (argc == 2) {
-    return GetBrewFunction(caffe::string(argv[1]))();
+    result = GetBrewFunction(caffe::string(argv[1]))();
   } else {
     gflags::ShowUsageWithFlagsRestrict(argv[0], "tools/caffe");
   }
+  caffe::GlobalFinalize();
+  return result;
 }

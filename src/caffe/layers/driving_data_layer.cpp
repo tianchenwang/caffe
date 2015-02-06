@@ -3,6 +3,7 @@
 
 #include <string>
 #include <vector>
+#include <algorithm>
 
 #include "caffe/common.hpp"
 #include "caffe/data_layers.hpp"
@@ -147,8 +148,18 @@ void DrivingDataLayer<Dtype>::DataLayerSetUp(
     CHECK_EQ(mdb_cursor_open(mdb_txn_, mdb_dbi_, &mdb_cursor_), MDB_SUCCESS)
         << "mdb_cursor_open failed";
     LOG(INFO) << "Opening lmdb " << this->layer_param_.data_param().source();
+    // Set cursor at begining
     CHECK_EQ(mdb_cursor_get(mdb_cursor_, &mdb_key_, &mdb_value_, MDB_FIRST),
-        MDB_SUCCESS) << "mdb_cursor_get failed";
+             MDB_SUCCESS);
+    // Jump forward to our MPI rank
+    for (int i = 0; i < Caffe::mpi()->rank(); ++i) {
+      CHECK_EQ(mdb_cursor_get(mdb_cursor_, &mdb_key_, &mdb_value_, MDB_NEXT),
+               MDB_SUCCESS);
+    }
+    // read our first data point
+    CHECK_EQ(mdb_cursor_get(mdb_cursor_, &mdb_key_,
+                            &mdb_value_, MDB_GET_CURRENT),
+             MDB_SUCCESS) << "mdb_cursor_get failed";
     break;
   default:
     LOG(FATAL) << "Unknown database backend";
@@ -158,6 +169,7 @@ void DrivingDataLayer<Dtype>::DataLayerSetUp(
   if (this->layer_param_.data_param().rand_skip()) {
     unsigned int skip = caffe_rng_rand() %
                         this->layer_param_.data_param().rand_skip();
+    Caffe::mpi()->Bcast(1, &skip);
     LOG(INFO) << "Skipping first " << skip << " data points.";
     while (skip-- > 0) {
       switch (this->layer_param_.data_param().backend()) {
@@ -211,7 +223,8 @@ void DrivingDataLayer<Dtype>::DataLayerSetUp(
   (*top)[IMAGE]->Reshape(
       this->layer_param_.data_param().batch_size(), datum.channels(),
       data.car_cropped_height(), data.car_cropped_width());
-  this->prefetch_datas_[IMAGE]->Reshape(this->layer_param_.data_param().batch_size(),
+  this->prefetch_datas_[IMAGE]->Reshape(
+      this->layer_param_.data_param().batch_size(),
       datum.channels(), data.car_cropped_height(), data.car_cropped_width());
   LOG(INFO) << "output image data size: " << (*top)[IMAGE]->num() << ","
       << (*top)[IMAGE]->channels() << "," << (*top)[IMAGE]->height() << ","
@@ -248,7 +261,8 @@ void DrivingDataLayer<Dtype>::DataLayerSetUp(
   this->datum_channels_ = datum.channels();
   this->datum_height_ = data.car_cropped_height();
   this->datum_width_ = data.car_cropped_width();
-  this->datum_size_ = datum.channels() * data.car_cropped_height() * data.car_cropped_width();
+  this->datum_size_ = datum.channels() * data.car_cropped_height() \
+    * data.car_cropped_width();
 
   const unsigned int rng_seed = caffe_rng_rand();
   rng_.reset(new Caffe::RNG(rng_seed));
@@ -271,14 +285,17 @@ bool DrivingDataLayer<Dtype>::ReadBoundingBoxLabelToDatum(
   const int full_label_width = width * grid_dim;
   const int full_label_height = height * grid_dim;
   const float half_shrink_factor = data.car_shrink_factor() / 2;
-  const float scaling = static_cast<float>(full_label_width) / data.car_cropped_width();
+  const float scaling = static_cast<float>(full_label_width) \
+    / data.car_cropped_width();
 
   // 1 pixel label, 4 bounding box coordinates, 3 normalization labels.
   const int num_total_labels = kNumRegressionMasks;
   vector<cv::Mat *> labels;
   for (int i = 0; i < num_total_labels; ++i) {
     labels.push_back(
-        new cv::Mat(full_label_height, full_label_width, CV_32F, cv::Scalar(0.0)));
+        new cv::Mat(full_label_height,
+                    full_label_width, CV_32F,
+                    cv::Scalar(0.0)));
   }
 
   for (int i = 0; i < data.car_boxes_size(); ++i) {
@@ -368,7 +385,7 @@ bool DrivingDataLayer<Dtype>::ReadBoundingBoxLabelToDatum(
   datum->set_channels(num_total_labels);
   datum->set_height(full_label_height);
   datum->set_width(full_label_width);
-  datum->set_label(0); // dummy label
+  datum->set_label(0);  // dummy label
   datum->clear_data();
   datum->clear_float_data();
 
@@ -425,7 +442,7 @@ void DrivingDataLayer<Dtype>::InternalThreadEntry() {
       break;
     case DataParameter_DB_LMDB:
       CHECK_EQ(mdb_cursor_get(mdb_cursor_, &mdb_key_,
-              &mdb_value_, MDB_GET_CURRENT), MDB_SUCCESS);
+                              &mdb_value_, MDB_GET_CURRENT), MDB_SUCCESS);
       data.ParseFromArray(mdb_value_.mv_data,
           mdb_value_.mv_size);
       break;
@@ -434,7 +451,7 @@ void DrivingDataLayer<Dtype>::InternalThreadEntry() {
     }
 
     // Apply data transformations
-    //this->data_transformer_.Transform(item_id, datum, this->mean_, top_data);
+    // this->data_transformer_.Transform(item_id, datum, this->mean_, top_data);
     const Datum& img_datum = data.car_image_datum();
     const string& img_datum_data = img_datum.data();
     int h_off = img_datum.height() == data.car_cropped_height() ?
@@ -444,11 +461,15 @@ void DrivingDataLayer<Dtype>::InternalThreadEntry() {
     for (int c = 0; c < img_datum.channels(); ++c) {
       for (int h = 0; h < data.car_cropped_height(); ++h) {
         for (int w = 0; w < data.car_cropped_width(); ++w) {
-          int top_index = ((item_id * img_datum.channels() + c) * data.car_cropped_height() + h)
+          int top_index = ((item_id * img_datum.channels() + c) \
+                           * data.car_cropped_height() + h)
               * data.car_cropped_width() + w;
-          int data_index = (c * img_datum.height() + h + h_off) * img_datum.width() + w + w_off;
-          Dtype datum_element =
-              static_cast<Dtype>(static_cast<uint8_t>(img_datum_data[data_index]));
+          int data_index = (c * img_datum.height() + h + h_off) \
+            * img_datum.width() + w + w_off;
+          uint8_t datum_element_ui8 = \
+            static_cast<uint8_t>(img_datum_data[data_index]);
+          Dtype datum_element = static_cast<Dtype>(datum_element_ui8);
+
           top_data[top_index] = datum_element - this->mean_[data_index];
         }
       }
@@ -457,7 +478,8 @@ void DrivingDataLayer<Dtype>::InternalThreadEntry() {
     vector<Datum> label_datums(kNumLabels);
     if (this->output_labels_) {
       // Call appropriate functions for genearting each label
-      ReadBoundingBoxLabelToDatum(data, &label_datums[CAR_MERGED_LABELS], h_off, w_off);
+      ReadBoundingBoxLabelToDatum(data, &label_datums[CAR_MERGED_LABELS],
+                                  h_off, w_off);
     }
     for (int i = 0; i < kNumLabels; ++i) {
       for (int c = 0; c < label_datums[i].channels(); ++c) {
@@ -465,8 +487,10 @@ void DrivingDataLayer<Dtype>::InternalThreadEntry() {
           for (int w = 0; w < label_datums[i].width(); ++w) {
             const int top_index = ((item_id * label_datums[i].channels() + c)
                 * label_datums[i].height() + h) * label_datums[i].width() + w;
-            const int data_index = (c * label_datums[i].height() + h) * label_datums[i].width() + w;
-            top_labels[i][top_index] = static_cast<Dtype>(label_datums[i].float_data(data_index));
+            const int data_index = (c * label_datums[i].height() + h) * \
+              label_datums[i].width() + w;
+            float label_datum_elem = label_datums[i].float_data(data_index);
+            top_labels[i][top_index] = static_cast<Dtype>(label_datum_elem);
           }
         }
       }
@@ -483,13 +507,16 @@ void DrivingDataLayer<Dtype>::InternalThreadEntry() {
       }
       break;
     case DataParameter_DB_LMDB:
-      if (mdb_cursor_get(mdb_cursor_, &mdb_key_,
-              &mdb_value_, MDB_NEXT) != MDB_SUCCESS) {
-        // We have reached the end. Restart from the first.
-        DLOG(INFO) << "Restarting data prefetching from start.";
-        CHECK_EQ(mdb_cursor_get(mdb_cursor_, &mdb_key_,
-                &mdb_value_, MDB_FIRST), MDB_SUCCESS);
+      for (int i = 0; i < Caffe::mpi()->size(); ++i) {
+        if (mdb_cursor_get(mdb_cursor_, &mdb_key_,
+                           &mdb_value_, MDB_NEXT) != MDB_SUCCESS) {
+          // We have reached the end. Restart from the first.
+          DLOG(INFO) << "Restarting data prefetching from start.";
+          CHECK_EQ(mdb_cursor_get(mdb_cursor_, &mdb_key_,
+                                  &mdb_value_, MDB_FIRST), MDB_SUCCESS);
+        }
       }
+
       break;
     default:
       LOG(FATAL) << "Unknown database backend";

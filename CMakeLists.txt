@@ -5,6 +5,7 @@ project( Caffe )
 
 option(CPU_ONLY "Build Caffe without GPU support" OFF)
 option(USE_CUDNN "Build Caffe with cuDNN support" ON)
+option(USE_MPI "Build Caffe with MPI support" ON)
 option(BUILD_PYTHON "Build Python wrapper" ON)
 option(BUILD_MATLAB "Build Matlab wrapper" OFF)
 option(BUILD_EXAMPLES "Build examples" ON)

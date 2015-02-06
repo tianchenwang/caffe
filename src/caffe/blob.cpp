@@ -2,6 +2,7 @@
 #include "caffe/common.hpp"
 #include "caffe/syncedmem.hpp"
 #include "caffe/util/math_functions.hpp"
+#include "caffe/util/mpi.hpp"
 
 namespace caffe {
 
@@ -102,6 +103,69 @@ void Blob<Dtype>::ShareDiff(const Blob& other) {
   CHECK_EQ(count_, other.count());
   diff_ = other.diff();
 }
+
+
+// The "SyncData" method is used for parameter blobs in a Net, which are stored
+// as Blob<float> or Blob<double> -- hence we do not define it for
+// Blob<int> or Blob<unsigned int>.
+template <> void Blob<unsigned int>::SyncData() { NOT_IMPLEMENTED; }
+template <> void Blob<int>::SyncData() { NOT_IMPLEMENTED; }
+
+template <typename Dtype>
+void Blob<Dtype>::SyncData() {
+  shared_ptr<MPI> mpi = Caffe::mpi();
+  switch (Caffe::mode()) {
+    case Caffe::CPU:
+      mpi->Allreduce(count_, mutable_cpu_data());
+      caffe_scal(count_, 1/Dtype(mpi->size()), mutable_cpu_data());
+      break;
+    case Caffe::GPU:
+#ifndef CPU_ONLY
+      mpi->Allreduce(count_, mutable_gpu_data());
+      caffe_gpu_scal(count_, 1/Dtype(mpi->size()), mutable_gpu_data());
+#else
+      NO_GPU;
+#endif
+      break;
+    default:
+      LOG(FATAL) << "Unknown caffe mode: " << Caffe::mode();
+  }
+}
+
+// The "SyncDiff" method is used for parameter blobs in a Net, which are stored
+// as Blob<float> or Blob<double> -- hence we do not define it for
+// Blob<int> or Blob<unsigned int>.
+template <> void Blob<unsigned int>::SyncDiff() { NOT_IMPLEMENTED; }
+template <> void Blob<int>::SyncDiff() { NOT_IMPLEMENTED; }
+
+template <typename Dtype>
+void Blob<Dtype>::SyncDiff() {
+  shared_ptr<MPI> mpi = Caffe::mpi();
+  switch (Caffe::mode()) {
+    case Caffe::CPU:
+      mpi->Allreduce(count_, mutable_cpu_diff());
+      caffe_scal(count_, 1/Dtype(mpi->size()), mutable_cpu_diff());
+      break;
+    case Caffe::GPU:
+#ifndef CPU_ONLY
+      mpi->Allreduce(count_, mutable_gpu_diff());
+      caffe_gpu_scal(count_, 1/Dtype(mpi->size()), mutable_gpu_diff());
+#else
+      NO_GPU;
+#endif
+      break;
+    default:
+      LOG(FATAL) << "Unknown caffe mode: " << Caffe::mode();
+  }
+}
+
+
+template <typename Dtype>
+void Blob<Dtype>::BcastData(const int rank) {
+  shared_ptr<MPI> mpi = Caffe::mpi();
+  mpi->Bcast(count_, mutable_cpu_data(), rank);
+}
+
 
 // The "update" method is used for parameter blobs in a Net, which are stored
 // as Blob<float> or Blob<double> -- hence we do not define it for
@@ -299,4 +363,3 @@ template class Blob<int>;
 template class Blob<unsigned int>;
 
 }  // namespace caffe
-
