@@ -10,6 +10,6 @@ max_iter: 1450000
 momentum: 0.95
 weight_decay: 0.00005
 snapshot: 1000
-snapshot_prefix: "/deep/group/driving_data/twangcat/caffe_models/caffe_lane_train_deep23_16nodes_newschedule_fastpython"
+snapshot_prefix: "/deep/group/driving_data/twangcat/caffe_models/caffe_lane_train_deep23_16nodes_newschedule_fastpython_pretrained"
 solver_mode: GPU
 solver_type: NESTEROV

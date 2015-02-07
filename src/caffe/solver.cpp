@@ -290,7 +290,7 @@ void Solver<Dtype>::Solve(const char* resume_file) {
 
     //int score_index = 0;
     std::ostringstream stringStream;
-    stringStream <<"/deep/group/driving_data/twangcat/caffe_models/objlog_rank"<<mpiRank(MPI_COMM_WORLD);
+    stringStream <<"/deep/group/driving_data/twangcat/caffe_models/objlog_rank_pretrained_"<<mpiRank(MPI_COMM_WORLD);
     std::string objlog_name = stringStream.str();
     std::ofstream objfile (objlog_name.c_str(),ios::app);
     for (int j = 0; j < result.size(); ++j) {

@@ -8,7 +8,7 @@ layers {
   video_data_param {
     source: "/scail/group/deeplearning/driving_data/twangcat/schedules/q50_multilane_planar_train_schedule1_batch40_2cam.txt"
     batch_size: 40
-    rand_skip: 38000
+    #rand_skip: 38000
   }
   transform_param {
     mean_file: "driving_img_mean.binaryproto"
@@ -24,7 +24,7 @@ layers {
   multilane_label_param {
     source: "/scail/group/deeplearning/driving_data/twangcat/schedules/q50_multilane_planar_train_schedule1_batch40_2cam.txt"
     batch_size: 40
-    rand_skip: 38000
+    #rand_skip: 38000
   }
   include: { phase: TRAIN }
 }
@@ -35,9 +35,7 @@ layers {
   type: VIDEO_DATA
   top: "data"
   video_data_param {
-    #source: "/scail/group/deeplearning/driving_data/twangcat/schedules/q50_multilane_planar_test_schedule_4-10-14-pleasanton-all.avi_batch10.txt"
-    #source: "/scail/group/deeplearning/driving_data/twangcat/schedules/q50_multilane_planar_test_schedule_4-11-14-sanrafael-sanrafael_e1.avi_batch10.txt"
-    source: "/scail/group/deeplearning/driving_data/twangcat/schedules/q50_multilane_planar_test_schedule_8-1-14-monterey-ToMontery_c1.avi_batch10.txt"
+    source: "/scail/group/deeplearning/driving_data/twangcat/schedules/q50_multilane_planar_test_schedule-4-10-14-pleasanton_batch10_2cam.txt"
     batch_size: 10
   }
   transform_param {
@@ -52,9 +50,7 @@ layers {
   type: MULTILANE_LABEL
   top: "label"
   multilane_label_param {
-    #source: "/scail/group/deeplearning/driving_data/twangcat/schedules/q50_multilane_planar_test_schedule_4-10-14-pleasanton-all.avi_batch10.txt"
-    #source: "/scail/group/deeplearning/driving_data/twangcat/schedules/q50_multilane_planar_test_schedule_4-11-14-sanrafael-sanrafael_e1.avi_batch10.txt"
-    source: "/scail/group/deeplearning/driving_data/twangcat/schedules/q50_multilane_planar_test_schedule_8-1-14-monterey-ToMontery_c1.avi_batch10.txt"
+    source: "/scail/group/deeplearning/driving_data/twangcat/schedules/q50_multilane_planar_test_schedule-4-10-14-pleasanton_batch10_2cam.txt"
     batch_size: 10
   }
   include: { phase: TEST }
@@ -92,12 +88,12 @@ layers {
 }
 
 layers {
-  name: "conv1"
+  name: "L0"
   type: CONVOLUTION
   bottom: "data"
-  top: "conv1"
+  top: "L0"
   blobs_lr: 1
-  blobs_lr: 2
+  blobs_lr: 1
   weight_decay: 1
   weight_decay: 0
   convolution_param {
@@ -117,13 +113,13 @@ layers {
 layers {
   name: "relu1"
   type: RELU
-  bottom: "conv1"
-  top: "conv1"
+  bottom: "L0"
+  top: "L0"
 }
 layers {
   name: "norm1"
   type: LRN_FIXED
-  bottom: "conv1"
+  bottom: "L0"
   top: "norm1"
   lrn_param {
     local_size: 5
@@ -143,19 +139,19 @@ layers {
   }
 }
 layers {
-  name: "conv2"
+  name: "L1"
   type: CONVOLUTION
   bottom: "pool1"
-  top: "conv2"
+  top: "L1"
   blobs_lr: 1
-  blobs_lr: 2
+  blobs_lr: 1
   weight_decay: 1
   weight_decay: 0
   convolution_param {
     num_output: 256
     pad: 2
     kernel_size: 5
-    group: 2
+    group: 1
     weight_filler {
       type: "gaussian"
       std: 0.01
@@ -169,13 +165,13 @@ layers {
 layers {
   name: "relu2"
   type: RELU
-  bottom: "conv2"
-  top: "conv2"
+  bottom: "L1"
+  top: "L1"
 }
 layers {
   name: "norm2"
   type: LRN_FIXED
-  bottom: "conv2"
+  bottom: "L1"
   top: "norm2"
   lrn_param {
     local_size: 5
@@ -195,12 +191,12 @@ layers {
   }
 }
 layers {
-  name: "conv3"
+  name: "L2"
   type: CONVOLUTION
   bottom: "pool2"
-  top: "conv3"
+  top: "L2"
   blobs_lr: 1
-  blobs_lr: 2
+  blobs_lr: 1
   weight_decay: 1
   weight_decay: 0
   convolution_param {
@@ -220,23 +216,23 @@ layers {
 layers {
   name: "relu3"
   type: RELU
-  bottom: "conv3"
-  top: "conv3"
+  bottom: "L2"
+  top: "L2"
 }
 layers {
-  name: "conv4"
+  name: "L3"
   type: CONVOLUTION
-  bottom: "conv3"
-  top: "conv4"
+  bottom: "L2"
+  top: "L3"
   blobs_lr: 1
-  blobs_lr: 2
+  blobs_lr: 1
   weight_decay: 1
   weight_decay: 0
   convolution_param {
     num_output: 384
     pad: 1
     kernel_size: 3
-    group: 2
+    group: 1
     weight_filler {
       type: "gaussian"
       std: 0.01
@@ -250,23 +246,23 @@ layers {
 layers {
   name: "relu4"
   type: RELU
-  bottom: "conv4"
-  top: "conv4"
+  bottom: "L3"
+  top: "L3"
 }
 layers {
-  name: "conv5"
+  name: "L4"
   type: CONVOLUTION
-  bottom: "conv4"
-  top: "conv5"
+  bottom: "L3"
+  top: "L4"
   blobs_lr: 1
-  blobs_lr: 2
+  blobs_lr: 1
   weight_decay: 1
   weight_decay: 0
   convolution_param {
     num_output: 384
     pad: 1
     kernel_size: 3
-    group: 2
+    group: 1
     weight_filler {
       type: "gaussian"
       std: 0.01
@@ -280,13 +276,13 @@ layers {
 layers {
   name: "relu5"
   type: RELU
-  bottom: "conv5"
-  top: "conv5"
+  bottom: "L4"
+  top: "L4"
 }
 layers {
   name: "pool5"
   type: POOLING
-  bottom: "conv5"
+  bottom: "L4"
   top: "pool5"
   pooling_param {
     pool: MAX
@@ -295,12 +291,12 @@ layers {
   }
 }
 layers {
-  name: "fc6-conv"
+  name: "L5"
   type: CONVOLUTION
   bottom: "pool5"
-  top: "fc6-conv"
+  top: "L5"
   blobs_lr: 1
-  blobs_lr: 2
+  blobs_lr: 1
   weight_decay: 1
   weight_decay: 0
   convolution_param {
@@ -320,25 +316,25 @@ layers {
 layers {
   name: "relu6"
   type: RELU
-  bottom: "fc6-conv"
-  top: "fc6-conv"
+  bottom: "L5"
+  top: "L5"
 }
 layers {
   name: "drop6"
   type: DROPOUT
-  bottom: "fc6-conv"
-  top: "fc6-conv"
+  bottom: "L5"
+  top: "L5"
   dropout_param {
     dropout_ratio: 0.5
   }
 }
 layers {
-  name: "fc7-conv"
+  name: "L6"
   type: CONVOLUTION
-  bottom: "fc6-conv"
-  top: "fc7-conv"
+  bottom: "L5"
+  top: "L6"
   blobs_lr: 1
-  blobs_lr: 2
+  blobs_lr: 1
   weight_decay: 1
   weight_decay: 0
   convolution_param {
@@ -357,14 +353,14 @@ layers {
 layers {
   name: "relu7"
   type: RELU
-  bottom: "fc7-conv"
-  top: "fc7-conv"
+  bottom: "L6"
+  top: "L6"
 }
 layers {
   name: "drop7"
   type: DROPOUT
-  bottom: "fc7-conv"
-  top: "fc7-conv"
+  bottom: "L6"
+  top: "L6"
   dropout_param {
     dropout_ratio: 0.5
   }
@@ -373,11 +369,11 @@ layers {
 layers {
   name: "bb-output"
   type: CONVOLUTION
-  bottom: "fc7-conv"
+  bottom: "L6"
   top: "bb-output"
-  #blobs_lr: 100
-  #blobs_lr: 200
-  weight_decay: 0.00001
+  blobs_lr: 1
+  blobs_lr: 1
+  weight_decay: 1
   weight_decay: 0
   convolution_param {
     num_output: 96 #64
@@ -396,10 +392,10 @@ layers {
 layers {
   name: "pixel-conv"
   type: CONVOLUTION
-  bottom: "fc7-conv"
+  bottom: "L6"
   top: "pixel-conv"
   blobs_lr: 1
-  blobs_lr: 2
+  blobs_lr: 1
   weight_decay: 1
   weight_decay: 0
   convolution_param {
@@ -476,9 +472,7 @@ layers {
   top: "blob-writer"
   blob_writer_param {
     #prefix: "/deep/group/driving_data/twangcat/caffe_results/proto/raw_outputs/4-3-14-gilroy-from_gilroy_g1"
-    #prefix: "/deep/group/driving_data/twangcat/caffe_results/proto/raw_outputs/4-10-14-pleasanton-all"
-    #prefix: "/deep/group/driving_data/twangcat/caffe_results/proto/raw_outputs/4-11-14-sanrafael-sanrafael_e1"
-    prefix: "/deep/group/driving_data/twangcat/caffe_results/proto/raw_outputs/8-1-14-monterey-ToMonterey_c1"
+    prefix: "/deep/group/driving_data/twangcat/caffe_results/proto/raw_outputs/4-10-14-pleasanton-880n_b2"
   }
   include: { phase: TEST }                                                                                                  
 }  
