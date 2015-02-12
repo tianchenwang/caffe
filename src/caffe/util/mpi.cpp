@@ -35,7 +35,6 @@ void caffe_init_mpi(int* pargc, char*** pargv) {
 #ifdef USE_MPI
     distributed = true;
     int local_rank = (std::atoi(local_rank_env));
-    local_rank = get_free_deviceid(local_rank);
     Caffe::SetDevice(local_rank);
     int provided, requested = MPI_THREAD_MULTIPLE;
     MPI_CHECK(MPI_Init_thread(pargc, pargv, requested, &provided));
@@ -52,47 +51,10 @@ void caffe_init_mpi(int* pargc, char*** pargv) {
     mpi.reset(new MPILocal());
   }
   // Turn off logging for all ranks except 0
-  if (mpi->rank() > 0) {
+  if (mpi->rank() > 0)
     FLAGS_minloglevel = 4;
-    // ostringstream rank_str;
-    // rank_str << mpi->rank();
-    // FLAGS_log_dir = FLAGS_log_dir + "/" + rank_str.str();
-    // FLAGS_stderrthreshold = 4;
-  }
 
   Caffe::set_mpi(mpi);
-}
-
-
-struct sort_pred {
-  bool operator()(const std::pair<size_t, int>& left,
-                  const std::pair<size_t, int>& right) {
-    return left.first > right.first;
-  }
-};
-
-
-// This is somewhat experimental because there is no guarantee all
-// ranks will return the same info for free GPUs
-static int get_free_deviceid(int local_rank) {
-  int num_devices, orig_device;
-  CUDA_CHECK(cudaGetDevice(&orig_device));
-  CUDA_CHECK(cudaGetDeviceCount(&num_devices));
-  std::vector<std::pair<size_t, int> > device_mems(num_devices);
-  for (int devid = 0; devid < num_devices; ++devid) {
-    Caffe::SetDevice(devid);
-    size_t free_mem = Caffe::DeviceMemoryFree();
-    device_mems[devid] = std::pair<int, size_t>(free_mem, devid);
-  }
-  std::sort(device_mems.begin(), device_mems.end(), sort_pred());
-  Caffe::SetDevice(orig_device);
-  std::ostringstream info;
-  for (int devid = 0; devid < num_devices; ++devid) {
-    info << "(" << device_mems[devid].second << ", "
-         << device_mems[devid].first / (1024.*1024.) << ") ";
-  }
-  LOG(INFO) << "Rank "<< local_rank << " " << info.str();
-  return device_mems[local_rank].second;
 }
 
 
