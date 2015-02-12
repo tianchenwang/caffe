@@ -1,5 +1,4 @@
 #include <string>
-
 #include "caffe/layer.hpp"
 #include "caffe/proto/caffe.pb.h"
 #include "caffe/vision_layers.hpp"
@@ -251,6 +250,14 @@ Layer<Dtype>* GetLayer(const LayerParameter& param) {
     return GetTanHLayer<Dtype>(name, param);
   case LayerParameter_LayerType_WINDOW_DATA:
     return new WindowDataLayer<Dtype>(param);
+  case LayerParameter_LayerType_LRNK:
+    return new LRNKLayer<Dtype>(param);
+  case LayerParameter_LayerType_L1_LOSS:
+    return new L1LossLayer<Dtype>(param);
+  case LayerParameter_LayerType_DRIVING_DATA:
+    return new DrivingDataLayer<Dtype>(param);
+  case LayerParameter_LayerType_TILING:
+    return new TilingLayer<Dtype>(param);
   case LayerParameter_LayerType_NONE:
     LOG(FATAL) << "Layer " << name << " has unspecified type.";
   default:

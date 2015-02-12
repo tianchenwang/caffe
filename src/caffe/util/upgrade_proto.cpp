@@ -462,6 +462,8 @@ LayerParameter_LayerType UpgradeV0LayerType(const string& type) {
     return LayerParameter_LayerType_CONVOLUTION;
   } else if (type == "data") {
     return LayerParameter_LayerType_DATA;
+  } else if (type == "driving_data") {
+    return LayerParameter_LayerType_DRIVING_DATA;
   } else if (type == "dropout") {
     return LayerParameter_LayerType_DROPOUT;
   } else if (type == "euclidean_loss") {
@@ -480,8 +482,12 @@ LayerParameter_LayerType UpgradeV0LayerType(const string& type) {
     return LayerParameter_LayerType_INFOGAIN_LOSS;
   } else if (type == "innerproduct") {
     return LayerParameter_LayerType_INNER_PRODUCT;
+  } else if (type == "l1_loss") {
+    return LayerParameter_LayerType_L1_LOSS;
   } else if (type == "lrn") {
     return LayerParameter_LayerType_LRN;
+  } else if (type == "lrnk") {
+    return LayerParameter_LayerType_LRNK;
   } else if (type == "multinomial_logistic_loss") {
     return LayerParameter_LayerType_MULTINOMIAL_LOGISTIC_LOSS;
   } else if (type == "pool") {
@@ -498,6 +504,8 @@ LayerParameter_LayerType UpgradeV0LayerType(const string& type) {
     return LayerParameter_LayerType_SPLIT;
   } else if (type == "tanh") {
     return LayerParameter_LayerType_TANH;
+  } else if (type == "tiling") {
+    return LayerParameter_LayerType_TILING;
   } else if (type == "window_data") {
     return LayerParameter_LayerType_WINDOW_DATA;
   } else {

@@ -275,6 +275,34 @@ class LRNLayer : public Layer<Dtype> {
 
 
 /**
+ * @brief Normalize the input in a local region across or within
+ * feature maps. This implements Krizhevsky's style LRN.
+ *
+ * TODO(dox): thorough documentation for Forward, Backward, and proto params.
+ */
+template <typename Dtype>
+class LRNKLayer : public LRNLayer<Dtype> {
+ public:
+  explicit LRNKLayer(const LayerParameter& param)
+      : LRNLayer<Dtype>(param) {}
+
+  virtual inline LayerParameter_LayerType type() const {
+    return LayerParameter_LayerType_LRNK;
+  }
+
+ protected:
+  virtual void CrossChannelForward_cpu(const vector<Blob<Dtype>*>& bottom,
+      vector<Blob<Dtype>*>* top);
+  virtual void CrossChannelForward_gpu(const vector<Blob<Dtype>*>& bottom,
+      vector<Blob<Dtype>*>* top);
+  virtual void CrossChannelBackward_cpu(const vector<Blob<Dtype>*>& top,
+      const vector<bool>& propagate_down, vector<Blob<Dtype>*>* bottom);
+  virtual void CrossChannelBackward_gpu(const vector<Blob<Dtype>*>& top,
+      const vector<bool>& propagate_down, vector<Blob<Dtype>*>* bottom);
+};
+
+
+/**
  * @brief Pools the input image by taking the max, average, etc. within regions.
  *
  * TODO(dox): thorough documentation for Forward, Backward, and proto params.
@@ -349,6 +377,50 @@ class CuDNNPoolingLayer : public PoolingLayer<Dtype> {
   cudnnPoolingMode_t        mode_;
 };
 #endif
+
+/**
+ * @brief for transforming a C x H x W blob into a
+ * C/t^2 x H*t x W*t blob where t is the tile dimension, and each pixel in
+ * the input is turned into a txt grid from the channels in row major order.
+ *
+ */
+template <typename Dtype>
+class TilingLayer : public Layer<Dtype> {
+ public:
+  explicit TilingLayer(const LayerParameter& param)
+      : Layer<Dtype>(param) {}
+  virtual void LayerSetUp(const vector<Blob<Dtype>*>& bottom,
+      vector<Blob<Dtype>*>* top);
+  virtual void Reshape(const vector<Blob<Dtype>*>& bottom,
+      vector<Blob<Dtype>*>* top);
+
+  virtual inline LayerParameter_LayerType type() const {
+    return LayerParameter_LayerType_TILING;
+  }
+
+  virtual inline int ExactNumBottomBlobs() const { return 1; }
+  virtual inline int MinTopBlobs() const { return 1; }
+  // MAX POOL layers can output an extra top blob for the mask;
+  // others can only output the pooled inputs.
+  virtual inline int MaxTopBlobs() const { return 1; }
+
+ protected:
+  virtual void Forward_cpu(const vector<Blob<Dtype>*>& bottom,
+      vector<Blob<Dtype>*>* top);
+  virtual void Forward_gpu(const vector<Blob<Dtype>*>& bottom,
+      vector<Blob<Dtype>*>* top);
+  virtual void Backward_cpu(const vector<Blob<Dtype>*>& top,
+      const vector<bool>& propagate_down, vector<Blob<Dtype>*>* bottom);
+  virtual void Backward_gpu(const vector<Blob<Dtype>*>& top,
+      const vector<bool>& propagate_down, vector<Blob<Dtype>*>* bottom);
+
+  int input_channels_, output_channels_;
+  int input_width_, input_height_;
+  int output_width_, output_height_;
+  int count_per_input_map_, count_per_output_map_;
+  int tile_dim_, tile_dim_sq_;
+};
+
 
 }  // namespace caffe
 

@@ -1,0 +1,359 @@
+name: "BrodyNet"
+input: "data"
+input_dim: 10
+input_dim: 3
+input_dim: 480
+input_dim: 640
+
+layers {
+  name: "L0"
+  type: CONVOLUTION
+  bottom: "data"
+  top: "L0"
+  blobs_lr: 1
+  blobs_lr: 2
+  weight_decay: 1
+  weight_decay: 0
+  convolution_param {
+    num_output: 96
+    kernel_size: 11
+    stride: 4
+    weight_filler {
+      type: "gaussian"
+      std: 0.01
+    }
+    bias_filler {
+      type: "constant"
+      value: 0.1
+    }
+  }
+}
+layers {
+  name: "relu1"
+  type: RELU
+  bottom: "L0"
+  top: "L0"
+}
+layers {
+  name: "norm1"
+  type: LRNK
+  bottom: "L0"
+  top: "norm1"
+  lrn_param {
+    local_size: 5
+    alpha: 0.0001
+    beta: 0.75
+  }
+}
+layers {
+  name: "pool1"
+  type: POOLING
+  bottom: "norm1"
+  top: "pool1"
+  pooling_param {
+    pool: MAX
+    kernel_size: 3
+    stride: 2
+  }
+}
+layers {
+  name: "L1"
+  type: CONVOLUTION
+  bottom: "pool1"
+  top: "L1"
+  blobs_lr: 1
+  blobs_lr: 2
+  weight_decay: 1
+  weight_decay: 0
+  convolution_param {
+    num_output: 256
+    pad: 2
+    kernel_size: 5
+    group: 1
+    weight_filler {
+      type: "gaussian"
+      std: 0.01
+    }
+    bias_filler {
+      type: "constant"
+      value: 0.1
+    }
+  }
+}
+layers {
+  name: "relu2"
+  type: RELU
+  bottom: "L1"
+  top: "L1"
+}
+layers {
+  name: "norm2"
+  type: LRNK
+  bottom: "L1"
+  top: "norm2"
+  lrn_param {
+    local_size: 5
+    alpha: 0.0001
+    beta: 0.75
+  }
+}
+layers {
+  name: "pool2"
+  type: POOLING
+  bottom: "norm2"
+  top: "pool2"
+  pooling_param {
+    pool: MAX
+    kernel_size: 3
+    stride: 2
+  }
+}
+layers {
+  name: "L2"
+  type: CONVOLUTION
+  bottom: "pool2"
+  top: "L2"
+  blobs_lr: 1
+  blobs_lr: 2
+  weight_decay: 1
+  weight_decay: 0
+  convolution_param {
+    num_output: 384
+    pad: 1
+    kernel_size: 3
+    weight_filler {
+      type: "gaussian"
+      std: 0.01
+    }
+    bias_filler {
+      type: "constant"
+      value: 0.1
+    }
+  }
+}
+layers {
+  name: "relu3"
+  type: RELU
+  bottom: "L2"
+  top: "L2"
+}
+layers {
+  name: "L3"
+  type: CONVOLUTION
+  bottom: "L2"
+  top: "L3"
+  blobs_lr: 1
+  blobs_lr: 2
+  weight_decay: 1
+  weight_decay: 0
+  convolution_param {
+    num_output: 384
+    pad: 1
+    kernel_size: 3
+    group: 1
+    weight_filler {
+      type: "gaussian"
+      std: 0.01
+    }
+    bias_filler {
+      type: "constant"
+      value: 0.1
+    }
+  }
+}
+layers {
+  name: "relu4"
+  type: RELU
+  bottom: "L3"
+  top: "L3"
+}
+layers {
+  name: "L4"
+  type: CONVOLUTION
+  bottom: "L3"
+  top: "L4"
+  blobs_lr: 1
+  blobs_lr: 2
+  weight_decay: 1
+  weight_decay: 0
+  convolution_param {
+    num_output: 384
+    pad: 1
+    kernel_size: 3
+    group: 1
+    weight_filler {
+      type: "gaussian"
+      std: 0.01
+    }
+    bias_filler {
+      type: "constant"
+      value: 0.1
+    }
+  }
+}
+layers {
+  name: "relu5"
+  type: RELU
+  bottom: "L4"
+  top: "L4"
+}
+layers {
+  name: "pool5"
+  type: POOLING
+  bottom: "L4"
+  top: "pool5"
+  pooling_param {
+    pool: MAX
+    kernel_size: 3
+    stride: 2
+  }
+}
+layers {
+  name: "L5"
+  type: CONVOLUTION
+  bottom: "pool5"
+  top: "L5"
+  blobs_lr: 1
+  blobs_lr: 2
+  weight_decay: 1
+  weight_decay: 0
+  convolution_param {
+    num_output: 4096
+    kernel_size: 6
+    pad: 3
+    weight_filler {
+      type: "gaussian"
+      std: 0.01
+    }
+    bias_filler {
+      type: "constant"
+      value: 1
+    }
+  }
+}
+layers {
+  name: "relu6"
+  type: RELU
+  bottom: "L5"
+  top: "L5"
+}
+layers {
+  name: "drop6"
+  type: DROPOUT
+  bottom: "L5"
+  top: "L5d"
+  dropout_param {
+    dropout_ratio: 0.5
+  }
+}
+layers {
+  name: "L6"
+  type: CONVOLUTION
+  bottom: "L5d"
+  top: "L6"
+  blobs_lr: 1
+  blobs_lr: 2
+  weight_decay: 1
+  weight_decay: 0
+  convolution_param {
+    num_output: 4096
+    kernel_size: 1
+    weight_filler {
+      type: "gaussian"
+      std: 0.01
+    }
+    bias_filler {
+      type: "constant"
+      value: 1
+    }
+  }
+}
+layers {
+  name: "relu7"
+  type: RELU
+  bottom: "L6"
+  top: "L6"
+}
+layers {
+  name: "drop7"
+  type: DROPOUT
+  bottom: "L6"
+  top: "L6d"
+  dropout_param {
+    dropout_ratio: 0.5
+  }
+}
+
+layers {
+  name: "L7.regression"
+  type: CONVOLUTION
+  bottom: "L6d"
+  top: "L7.regression"
+  blobs_lr: 1
+  blobs_lr: 2
+  weight_decay: 1
+  weight_decay: 0
+  convolution_param {
+    num_output: 320
+    kernel_size: 1
+    weight_filler {
+      type: "gaussian"
+      std: 0.01
+    }
+    bias_filler {
+      type: "constant"
+      value: 1.0
+    }
+  }
+}
+
+layers {
+  name: "L7"
+  type: CONVOLUTION
+  bottom: "L6d"
+  top: "L7"
+  blobs_lr: 1
+  blobs_lr: 2
+  weight_decay: 1
+  weight_decay: 0
+  convolution_param {
+    num_output: 128
+    kernel_size: 1
+    weight_filler {
+      type: "gaussian"
+      std: 0.005
+    }
+    bias_filler {
+      type: "constant"
+      value: 1.0
+    }
+  }
+}
+
+layers {
+  name: "pixel-tile"
+  type: TILING
+  bottom: "L7"
+  top: "pixel-conv-tiled"
+  tiling_param {
+    tile_dim: 8
+  }
+}
+
+layers {
+  name: "bb-tile"
+  type: TILING
+  bottom: "L7.regression"
+  top: "bb-output-tiled"
+  tiling_param {
+    tile_dim: 8
+  }
+}
+
+# Pixel level softmax prediction.
+layers {
+  name: "pixel-prob"
+  type: SOFTMAX
+  bottom: "pixel-conv-tiled"
+  top: "pixel-prob"
+}
