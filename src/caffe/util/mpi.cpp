@@ -22,10 +22,9 @@
 
 namespace caffe {
 
-
-static bool distributed = false;
-
-static int get_free_deviceid(int local_rank);
+namespace {
+bool distributed = false;
+}
 
 void caffe_init_mpi(int* pargc, char*** pargv) {
   const char* local_rank_env = std::getenv("MV2_COMM_WORLD_LOCAL_RANK");
@@ -34,7 +33,7 @@ void caffe_init_mpi(int* pargc, char*** pargv) {
   if (local_rank_env) {
 #ifdef USE_MPI
     distributed = true;
-    int local_rank = (std::atoi(local_rank_env));
+    int local_rank = std::atoi(local_rank_env);
     Caffe::SetDevice(local_rank);
     int provided, requested = MPI_THREAD_MULTIPLE;
     MPI_CHECK(MPI_Init_thread(pargc, pargv, requested, &provided));
