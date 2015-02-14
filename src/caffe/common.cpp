@@ -92,7 +92,8 @@ void* Caffe::RNG::generator() {
 
 Caffe::Caffe()
     : cublas_handle_(NULL), curand_generator_(NULL), random_generator_(),
-      mode_(Caffe::CPU), phase_(Caffe::TRAIN), device_state_(Caffe::MUTABLE) {
+      mode_(Caffe::CPU), phase_(Caffe::TRAIN), device_state_(Caffe::MUTABLE),
+      mpi_(new MPILocal()) {
   // Try to create a cublas handler, and report an error if failed (but we will
   // keep the program running as one might just want to run CPU code).
   if (cublasCreate(&cublas_handle_) != CUBLAS_STATUS_SUCCESS) {
