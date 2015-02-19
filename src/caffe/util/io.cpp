@@ -67,9 +67,7 @@ void WriteProtoToBinaryFile(const Message& proto, const char* filename) {
 }
 
 bool ReadImageToDatum(const string& filename, const int label,
-                      const int height, const int width,
-                      const bool is_color, const bool use_rgb,
-                      Datum* datum) {
+    const int height, const int width, const bool is_color, Datum* datum) {
   cv::Mat cv_img;
   int cv_read_flag = (is_color ? CV_LOAD_IMAGE_COLOR :
     CV_LOAD_IMAGE_GRAYSCALE);
@@ -99,11 +97,10 @@ bool ReadImageToDatum(const string& filename, const int label,
   string* datum_string = datum->mutable_data();
   if (is_color) {
     for (int c = 0; c < num_channels; ++c) {
-      int channel = use_rgb ? 2 - c : c;
       for (int h = 0; h < cv_img.rows; ++h) {
         for (int w = 0; w < cv_img.cols; ++w) {
           datum_string->push_back(
-              static_cast<char>(cv_img.at<cv::Vec3b>(h, w)[channel]));
+            static_cast<char>(cv_img.at<cv::Vec3b>(h, w)[c]));
         }
       }
     }

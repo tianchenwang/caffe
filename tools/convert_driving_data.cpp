@@ -46,7 +46,6 @@ DEFINE_bool(gray, false,
     "When this option is on, treat images as grayscale ones");
 DEFINE_bool(shuffle, true,
     "Randomly shuffle the order of images and their labels");
-DEFINE_bool(use_rgb, false, "use RGB channels");
 DEFINE_int32(width, 20, "Number of grids horizontally.");
 DEFINE_int32(height, 15, "Number of grids vertically.");
 DEFINE_int32(grid_dim, 8,
@@ -153,8 +152,7 @@ int main(int argc, char** argv) {
     }
     if (!ReadImageToDatum(image_path, 0,
                           resize_height, resize_width,
-                          is_color, FLAGS_use_rgb,
-                          data.mutable_car_image_datum())) {
+                          is_color, data.mutable_car_image_datum())) {
       continue;
     }
 
