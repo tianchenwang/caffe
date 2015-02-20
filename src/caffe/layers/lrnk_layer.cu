@@ -73,10 +73,11 @@ __global__ void LRNKFillScale(const int nthreads, const Dtype* in,
 
 template <typename Dtype>
 void LRNKLayer<Dtype>::CrossChannelForward_gpu(
-    const vector<Blob<Dtype>*>& bottom, vector<Blob<Dtype>*>* top) {
+    const vector<Blob<Dtype>*>& bottom,
+    const vector<Blob<Dtype>*>& top) {
   // First, compute scale
   const Dtype* bottom_data = bottom[0]->gpu_data();
-  Dtype* top_data = (*top)[0]->mutable_gpu_data();
+  Dtype* top_data = top[0]->mutable_gpu_data();
   Dtype* scale_data = this->scale_.mutable_gpu_data();
   // We will launch one kernel for each pixel location, and have the kernel
   // go through all the channels.
@@ -93,23 +94,32 @@ void LRNKLayer<Dtype>::CrossChannelForward_gpu(
       n_threads, bottom_data, scale_data, -this->beta_, top_data);
   CUDA_POST_KERNEL_CHECK;
 }
+template void LRNKLayer<float>::CrossChannelForward_gpu(
+    const vector<Blob<float>*>& bottom, const vector<Blob<float>*>& top);
+template void LRNKLayer<double>::CrossChannelForward_gpu(
+    const vector<Blob<double>*>& bottom, const vector<Blob<double>*>& top);
 
 
 template <typename Dtype>
 void LRNKLayer<Dtype>::CrossChannelBackward_gpu(
-    const vector<Blob<Dtype>*>& top, const vector<bool>& propagate_down,
-    vector<Blob<Dtype>*>* bottom) {
+    const vector<Blob<Dtype>*>& top,
+    const vector<bool>& propagate_down,
+    const vector<Blob<Dtype>*>& bottom) {
   int n_threads = this->num_ * this->height_ * this->width_;
   // NOLINT_NEXT_LINE(whitespace/operators)
   LRNComputeDiff<<<CAFFE_GET_BLOCKS(n_threads), CAFFE_CUDA_NUM_THREADS>>>(
-      n_threads, (*bottom)[0]->gpu_data(), top[0]->gpu_data(),
+      n_threads, bottom[0]->gpu_data(), top[0]->gpu_data(),
       this->scale_.gpu_data(), top[0]->gpu_diff(), this->num_,
       this->channels_, this->height_, this->width_,
       this->size_, -this->beta_, Dtype(2. * this->alpha_ * this->beta_),
-      (*bottom)[0]->mutable_gpu_diff());
+      bottom[0]->mutable_gpu_diff());
 }
+template void LRNKLayer<float>::CrossChannelBackward_gpu(
+    const vector<Blob<float>*>& top, const vector<bool>& propagate_down,
+    const vector<Blob<float>*>& bottom);
+template void LRNKLayer<double>::CrossChannelBackward_gpu(
+    const vector<Blob<double>*>& top, const vector<bool>& propagate_down,
+    const vector<Blob<double>*>& bottom);
 
-
-INSTANTIATE_CLASS(LRNKLayer);
 
 }  // namespace caffe

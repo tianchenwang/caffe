@@ -51,7 +51,7 @@ TYPED_TEST(LRNKLayerTest, TestSetupAcrossChannels) {
   typedef typename TypeParam::Dtype Dtype;
   LayerParameter layer_param;
   LRNKLayer<Dtype> layer(layer_param);
-  layer.SetUp(this->blob_bottom_vec_, &(this->blob_top_vec_));
+  layer.SetUp(this->blob_bottom_vec_, this->blob_top_vec_);
   EXPECT_EQ(this->blob_top_->num(), 2);
   EXPECT_EQ(this->blob_top_->channels(), 7);
   EXPECT_EQ(this->blob_top_->height(), 3);
@@ -63,20 +63,20 @@ TYPED_TEST(LRNKLayerTest, TestGradientAcrossChannels) {
   LayerParameter layer_param;
   LRNKLayer<Dtype> layer(layer_param);
   GradientChecker<Dtype> checker(1e-2, 1e-2);
-  layer.SetUp(this->blob_bottom_vec_, &(this->blob_top_vec_));
-  layer.Forward(this->blob_bottom_vec_, &(this->blob_top_vec_));
+  layer.SetUp(this->blob_bottom_vec_, this->blob_top_vec_);
+  layer.Forward(this->blob_bottom_vec_, this->blob_top_vec_);
   for (int i = 0; i < this->blob_top_->count(); ++i) {
     this->blob_top_->mutable_cpu_diff()[i] = 1.;
   }
   vector<bool> propagate_down(this->blob_bottom_vec_.size(), true);
   layer.Backward(this->blob_top_vec_, propagate_down,
-                 &(this->blob_bottom_vec_));
+                 this->blob_bottom_vec_);
   // for (int i = 0; i < this->blob_bottom_->count(); ++i) {
   //   std::cout << "CPU diff " << this->blob_bottom_->cpu_diff()[i]
   //       << std::endl;
   // }
-  checker.CheckGradientExhaustive(&layer, &(this->blob_bottom_vec_),
-      &(this->blob_top_vec_));
+  checker.CheckGradientExhaustive(&layer, this->blob_bottom_vec_,
+                                  this->blob_top_vec_);
 }
 
 TYPED_TEST(LRNKLayerTest, TestSetupWithinChannel) {
@@ -86,7 +86,7 @@ TYPED_TEST(LRNKLayerTest, TestSetupWithinChannel) {
       LRNParameter_NormRegion_WITHIN_CHANNEL);
   layer_param.mutable_lrn_param()->set_local_size(3);
   LRNKLayer<Dtype> layer(layer_param);
-  layer.SetUp(this->blob_bottom_vec_, &(this->blob_top_vec_));
+  layer.SetUp(this->blob_bottom_vec_, this->blob_top_vec_);
   EXPECT_EQ(this->blob_top_->num(), 2);
   EXPECT_EQ(this->blob_top_->channels(), 7);
   EXPECT_EQ(this->blob_top_->height(), 3);
@@ -101,13 +101,13 @@ TYPED_TEST(LRNKLayerTest, TestGradientWithinChannel) {
   layer_param.mutable_lrn_param()->set_local_size(3);
   LRNKLayer<Dtype> layer(layer_param);
   GradientChecker<Dtype> checker(1e-2, 1e-2);
-  layer.SetUp(this->blob_bottom_vec_, &(this->blob_top_vec_));
-  layer.Forward(this->blob_bottom_vec_, &(this->blob_top_vec_));
+  layer.SetUp(this->blob_bottom_vec_, this->blob_top_vec_);
+  layer.Forward(this->blob_bottom_vec_, this->blob_top_vec_);
   for (int i = 0; i < this->blob_top_->count(); ++i) {
     this->blob_top_->mutable_cpu_diff()[i] = 1.;
   }
-  checker.CheckGradientExhaustive(&layer, &(this->blob_bottom_vec_),
-      &(this->blob_top_vec_));
+  checker.CheckGradientExhaustive(&layer, this->blob_bottom_vec_,
+                                  this->blob_top_vec_);
 }
 
 

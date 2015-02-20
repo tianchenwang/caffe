@@ -8,9 +8,9 @@ namespace caffe {
 
 template <typename Dtype>
 void LRNKLayer<Dtype>::CrossChannelForward_cpu(
-    const vector<Blob<Dtype>*>& bottom, vector<Blob<Dtype>*>* top) {
+    const vector<Blob<Dtype>*>& bottom, const vector<Blob<Dtype>*>& top) {
   const Dtype* bottom_data = bottom[0]->cpu_data();
-  Dtype* top_data = (*top)[0]->mutable_cpu_data();
+  Dtype* top_data = top[0]->mutable_cpu_data();
   Dtype* scale_data = this->scale_.mutable_cpu_data();
   // start with the constant value
   for (int i = 0; i < this->scale_.count(); ++i) {
@@ -57,12 +57,12 @@ void LRNKLayer<Dtype>::CrossChannelForward_cpu(
 template <typename Dtype>
 void LRNKLayer<Dtype>::CrossChannelBackward_cpu(
     const vector<Blob<Dtype>*>& top, const vector<bool>& propagate_down,
-    vector<Blob<Dtype>*>* bottom) {
+    const vector<Blob<Dtype>*>& bottom) {
   const Dtype* top_diff = top[0]->cpu_diff();
   const Dtype* top_data = top[0]->cpu_data();
-  const Dtype* bottom_data = (*bottom)[0]->cpu_data();
+  const Dtype* bottom_data = bottom[0]->cpu_data();
   const Dtype* scale_data = this->scale_.cpu_data();
-  Dtype* bottom_diff = (*bottom)[0]->mutable_cpu_diff();
+  Dtype* bottom_diff = bottom[0]->mutable_cpu_diff();
   Blob<Dtype> padded_ratio(1, this->channels_ + this->size_ - 1,
                            this->height_, this->width_);
   Blob<Dtype> accum_ratio(1, 1, this->height_, this->width_);
@@ -121,6 +121,7 @@ STUB_GPU_BACKWARD(LRNKLayer, CrossChannelBackward);
 #endif
 
 INSTANTIATE_CLASS(LRNKLayer);
+REGISTER_LAYER_CLASS(LRNK);
 
 
 }  // namespace caffe

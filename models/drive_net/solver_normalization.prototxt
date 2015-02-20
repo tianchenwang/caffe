@@ -1,4 +1,4 @@
-net: "models/brody/train_val_driving_normalization.prototxt"
+net: "models/drive_net/train_val_driving_normalization.prototxt"
 test_iter: 20
 test_interval: 5000
 test_compute_loss: true
@@ -11,5 +11,5 @@ max_iter: 1450000
 momentum: 0.9
 weight_decay: 0.0005
 snapshot: 1000
-snapshot_prefix: "models/brody/snapshots/driving_normalization_nl"
+snapshot_prefix: "models/drive_net/snapshots/driving_normalization_nl"
 solver_mode: GPU

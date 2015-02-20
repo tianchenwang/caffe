@@ -9,7 +9,7 @@ layers {
   data_param {
     source: "/deep/u/willsong/caffe/driving_train_rgb"
     backend: LMDB
-    batch_size: 24
+    batch_size: 20 #24
   }
   transform_param {
     mean_file: "/deep/u/willsong/caffe/driving_mean_rgb.binaryproto"

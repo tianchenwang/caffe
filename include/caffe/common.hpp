@@ -20,7 +20,7 @@
 
 // gflags 2.1 issue: namespace google was changed to gflags without warning.
 // Luckily we will be able to use GFLAGS_GFAGS_H_ to detect if it is version
-// 2.1. If yes , we will add a temporary solution to redirect the namespace.
+// 2.1. If yes, we will add a temporary solution to redirect the namespace.
 // TODO(Yangqing): Once gflags solves the problem in a more elegant way, let's
 // remove the following hack.
 #ifndef GFLAGS_GFLAGS_H_
@@ -35,12 +35,38 @@ private:\
 
 // Instantiate a class with float and double specifications.
 #define INSTANTIATE_CLASS(classname) \
+  char gInstantiationGuard##classname; \
   template class classname<float>; \
   template class classname<double>
+
+#define INSTANTIATE_LAYER_GPU_FORWARD(classname) \
+  template void classname<float>::Forward_gpu( \
+      const std::vector<Blob<float>*>& bottom, \
+      const std::vector<Blob<float>*>& top); \
+  template void classname<double>::Forward_gpu( \
+      const std::vector<Blob<double>*>& bottom, \
+      const std::vector<Blob<double>*>& top);
+
+#define INSTANTIATE_LAYER_GPU_BACKWARD(classname) \
+  template void classname<float>::Backward_gpu( \
+      const std::vector<Blob<float>*>& top, \
+      const std::vector<bool>& propagate_down, \
+      const std::vector<Blob<float>*>& bottom); \
+  template void classname<double>::Backward_gpu( \
+      const std::vector<Blob<double>*>& top, \
+      const std::vector<bool>& propagate_down, \
+      const std::vector<Blob<double>*>& bottom)
+
+#define INSTANTIATE_LAYER_GPU_FUNCS(classname) \
+  INSTANTIATE_LAYER_GPU_FORWARD(classname); \
+  INSTANTIATE_LAYER_GPU_BACKWARD(classname)
 
 // A simple macro to mark codes that are not implemented, so that when the code
 // is executed we will see a fatal log.
 #define NOT_IMPLEMENTED LOG(FATAL) << "Not Implemented Yet"
+
+// See PR #1236
+namespace cv {class Mat;}
 
 namespace caffe {
 
@@ -52,6 +78,7 @@ using boost::shared_ptr;
 using std::fstream;
 using std::ios;
 using std::isnan;
+using std::isinf;
 using std::iterator;
 using std::make_pair;
 using std::map;
@@ -82,7 +109,6 @@ class Caffe {
     return *singleton_;
   }
   enum Brew { CPU, GPU };
-  enum Phase { TRAIN, TEST };
   enum DeviceState { FIXED, MUTABLE };
 
   // This random number generator facade hides boost and CUDA rng
@@ -115,8 +141,6 @@ class Caffe {
 
   // Returns the mode: running on CPU or GPU.
   inline static Brew mode() { return Get().mode_; }
-  // Returns the phase: TRAIN or TEST.
-  inline static Phase phase() { return Get().phase_; }
   // Returns the MPI implementation
   inline static shared_ptr<MPI> mpi() { return Get().mpi_; }
   // Returns the DeviceState: MUTABLE or FIXED
@@ -127,8 +151,6 @@ class Caffe {
   // freed in a non-pinned way, which may cause problems - I haven't verified
   // it personally but better to note it here in the header file.
   inline static void set_mode(Brew mode) { Get().mode_ = mode; }
-  // Sets the phase.
-  inline static void set_phase(Phase phase) { Get().phase_ = phase; }
   inline static void set_mpi(shared_ptr<MPI> mpi) { Get().mpi_ = mpi; }
   inline static void set_device_state(DeviceState device_state) {
     Get().device_state_ = device_state;
@@ -152,7 +174,6 @@ class Caffe {
   shared_ptr<MPI> mpi_;
 
   Brew mode_;
-  Phase phase_;
   DeviceState device_state_;
   static shared_ptr<Caffe> singleton_;
 
