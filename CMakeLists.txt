@@ -18,6 +18,7 @@ caffe_option(USE_CUDNN "Build Caffe with cuDNN libary support" ON IF NOT CPU_ONL
 caffe_option(USE_MPI "Build Caffe with MPI support" ON)
 caffe_option(BUILD_SHARED_LIBS "Build shared libraries" ON)
 caffe_option(BUILD_python "Build Python wrapper" ON)
+set(python_version "2" CACHE STRING "Specify which python version to use")
 caffe_option(BUILD_matlab "Build Matlab wrapper" OFF IF UNIX OR APPLE)
 caffe_option(BUILD_docs   "Build documentation" ON IF UNIX OR APPLE)
 
