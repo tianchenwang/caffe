@@ -436,12 +436,14 @@ message ArgMaxParameter {
 
 // Message that stores parameters used by ConcatLayer
 message ConcatParameter {
-  // The axis along which to concatenate.  Other axes must have the
+  // The axis along which to concatenate -- may be negative to index from the
+  // end (e.g., -1 for the last axis).  Other axes must have the
   // same dimension for all the bottom blobs.
-  // By default, ConcatLayer concatenates blobs along the channels axis (1).
-  optional uint32 axis = 1 [default = 1];
+  // By default, ConcatLayer concatenates blobs along the "channels" axis (1).
+  optional int32 axis = 2 [default = 1];
 
-  optional uint32 concat_dim = 2 [default = 1];  // alias for "axis"
+  // DEPRECATED: alias for "axis" -- does not support negative indexing.
+  optional uint32 concat_dim = 1 [default = 1];
 }
 
 // Message that stores parameters used by ContrastiveLossLayer
@@ -644,6 +646,7 @@ message InnerProductParameter {
 
   // The first axis to be lumped into a single inner product computation;
   // all preceding axes are retained in the output.
+  // May be negative to index from the end (e.g., -1 for the last axis).
   optional int32 axis = 5 [default = 1];
 }
 
@@ -769,12 +772,14 @@ message SigmoidParameter {
 
 // Message that stores parameters used by SliceLayer
 message SliceParameter {
-  // The axis along which to slice.
-  // By default, SliceLayer concatenates blobs along the channels axis (1).
-  optional uint32 axis = 1 [default = 1];
+  // The axis along which to slice -- may be negative to index from the end
+  // (e.g., -1 for the last axis).
+  // By default, SliceLayer concatenates blobs along the "channels" axis (1).
+  optional int32 axis = 3 [default = 1];
   repeated uint32 slice_point = 2;
 
-  optional uint32 slice_dim = 3 [default = 1];  // alias for "axis"
+  // DEPRECATED: alias for "axis" -- does not support negative indexing.
+  optional uint32 slice_dim = 1 [default = 1];
 }
 
 // Message that stores parameters used by SoftmaxLayer, SoftmaxWithLossLayer
@@ -786,9 +791,10 @@ message SoftmaxParameter {
   }
   optional Engine engine = 1 [default = DEFAULT];
 
-  // The axis along which to perform the softmax.
+  // The axis along which to perform the softmax -- may be negative to index
+  // from the end (e.g., -1 for the last axis).
   // Any other axes will be evaluated as independent softmaxes.
-  optional uint32 axis = 2 [default = 1];
+  optional int32 axis = 2 [default = 1];
 }
 
 // Message that stores parameters used by TanHLayer

@@ -7,8 +7,6 @@
 #include "caffe/util/math_functions.hpp"
 #include "caffe/util/mpi.hpp"
 
-const int kMaxBlobAxes = INT_MAX;
-
 namespace caffe {
 
 template <typename Dtype>

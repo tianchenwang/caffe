@@ -23,9 +23,20 @@ void ConcatLayer<Dtype>::LayerSetUp(const vector<Blob<Dtype>*>& bottom,
 template <typename Dtype>
 void ConcatLayer<Dtype>::Reshape(const vector<Blob<Dtype>*>& bottom,
       const vector<Blob<Dtype>*>& top) {
-  // Initialize with the first blob.
   const int num_axes = bottom[0]->num_axes();
-  CHECK_LT(concat_axis_, num_axes) << "concat axis out of range.";
+  const ConcatParameter& concat_param = this->layer_param_.concat_param();
+  if (concat_param.has_concat_dim()) {
+    concat_axis_ = static_cast<int>(concat_param.concat_dim());
+    // Don't allow negative indexing for concat_dim, a uint32 -- almost
+    // certainly unintended.
+    CHECK_GE(concat_axis_, 0) << "casting concat_dim from uint32 to int32 "
+        << "produced negative result; concat_dim must satisfy "
+        << "0 <= concat_dim < " << kMaxBlobAxes;
+    CHECK_LT(concat_axis_, num_axes) << "concat_dim out of range.";
+  } else {
+    concat_axis_ = bottom[0]->CanonicalAxisIndex(concat_param.axis());
+  }
+  // Initialize with the first blob.
   vector<int> top_shape = bottom[0]->shape();
   num_concats_ = bottom[0]->count(0, concat_axis_);
   concat_input_size_ = bottom[0]->count(concat_axis_ + 1);

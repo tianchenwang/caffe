@@ -10,9 +10,8 @@ namespace caffe {
 template <typename Dtype>
 void SoftmaxLayer<Dtype>::Reshape(const vector<Blob<Dtype>*>& bottom,
       const vector<Blob<Dtype>*>& top) {
-  softmax_axis_ = this->layer_param_.softmax_param().axis();
-  CHECK_GE(softmax_axis_, 0);
-  CHECK_LT(softmax_axis_, bottom[0]->num_axes());
+  softmax_axis_ =
+      bottom[0]->CanonicalAxisIndex(this->layer_param_.softmax_param().axis());
   top[0]->ReshapeLike(*bottom[0]);
   vector<int> mult_dims(1, bottom[0]->shape(softmax_axis_));
   sum_multiplier_.Reshape(mult_dims);

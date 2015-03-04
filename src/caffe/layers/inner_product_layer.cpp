@@ -15,11 +15,12 @@ void InnerProductLayer<Dtype>::LayerSetUp(const vector<Blob<Dtype>*>& bottom,
   const int num_output = this->layer_param_.inner_product_param().num_output();
   bias_term_ = this->layer_param_.inner_product_param().bias_term();
   N_ = num_output;
-  const int dim = this->layer_param_.inner_product_param().axis();
+  const int axis = bottom[0]->CanonicalAxisIndex(
+      this->layer_param_.inner_product_param().axis());
   // Dimensions starting from "axis" are "flattened" into a single
   // length K_ vector. For example, if bottom[0]'s shape is (N, C, H, W),
-  // N inner products with dimension CHW are performed.
-  K_ = bottom[0]->count(dim, bottom[0]->num_axes());
+  // and axis == 1, N inner products with dimension CHW are performed.
+  K_ = bottom[0]->count(axis);
   // Check if we need to set up the weights
   if (this->blobs_.size() > 0) {
     LOG(INFO) << "Skipping parameter initialization";
@@ -54,8 +55,9 @@ template <typename Dtype>
 void InnerProductLayer<Dtype>::Reshape(const vector<Blob<Dtype>*>& bottom,
       const vector<Blob<Dtype>*>& top) {
   // Figure out the dimensions
-  const int axis = this->layer_param_.inner_product_param().axis();
-  const int new_K = bottom[0]->count(axis, bottom[0]->num_axes());
+  const int axis = bottom[0]->CanonicalAxisIndex(
+      this->layer_param_.inner_product_param().axis());
+  const int new_K = bottom[0]->count(axis);
   CHECK_EQ(K_, new_K)
       << "Input size incompatible with inner product parameters.";
   // The first "axis" dimensions are independent inner products; the total

@@ -10,6 +10,8 @@
 #include "caffe/syncedmem.hpp"
 #include "caffe/util/math_functions.hpp"
 
+const int kMaxBlobAxes = INT_MAX;
+
 namespace caffe {
 
 /**
@@ -63,23 +65,16 @@ class Blob {
    * @brief Returns the dimension of the index-th axis (or the negative index-th
    *        axis from the end, if index is negative).
    *
-   * @param index the axis index.
-   *        If 0 <= index < num_axes(), return the dim of the index-th axis.
-   *        If -num_axes <= index <= -1, return the dim of the
-   *        (num_axes() - index)-th axis; e.g., the last axis if index == -1,
-   *        the second to last if index == -2, etc.
+   * @param index the axis index, which may be negative as it will be
+   *        "canonicalized" using CanonicalAxisIndex.
    *        Dies on out of range index.
    */
   inline int shape(int index) const {
-    CHECK_GE(index, -num_axes());
-    CHECK_LT(index, num_axes());
-    if (index < 0) {
-      index += num_axes();
-    }
-    return shape_[index];
+    return shape_[CanonicalAxisIndex(index)];
   }
   inline int num_axes() const { return shape_.size(); }
   inline int count() const { return count_; }
+
   /**
    * @brief Compute the volume of a slice; i.e., the product of dimensions
    *        among a range of axes.
@@ -108,6 +103,30 @@ class Blob {
    */
   inline int count(int start_axis) const {
     return count(start_axis, num_axes());
+  }
+
+  /**
+   * @brief Returns the 'canonical' version of a (usually) user-specified axis,
+   *        allowing for negative indexing (e.g., -1 for the last axis).
+   *
+   * @param index the axis index.
+   *        If 0 <= index < num_axes(), return index.
+   *        If -num_axes <= index <= -1, return (num_axes() - (-index)),
+   *        e.g., the last axis index (num_axes() - 1) if index == -1,
+   *        the second to last if index == -2, etc.
+   *        Dies on out of range index.
+   */
+  inline int CanonicalAxisIndex(int axis_index) const {
+    CHECK_GE(axis_index, -num_axes())
+        << "axis " << axis_index << " out of range for " << num_axes()
+        << "-D Blob with shape " << shape_string();
+    CHECK_LT(axis_index, num_axes())
+        << "axis " << axis_index << " out of range for " << num_axes()
+        << "-D Blob with shape " << shape_string();
+    if (axis_index < 0) {
+      return axis_index + num_axes();
+    }
+    return axis_index;
   }
 
   /// @brief Deprecated legacy shape accessor num: use shape(0) instead.
