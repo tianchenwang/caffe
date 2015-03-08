@@ -8,9 +8,13 @@
 #include "caffe/proto/caffe.pb.h"
 #include "caffe/solver.hpp"
 #include "caffe/util/io.hpp"
+#include "caffe/util/plot.hpp"
 #include "caffe/util/math_functions.hpp"
 #include "caffe/util/upgrade_proto.hpp"
-
+#include <opencv2/core/core.hpp>
+#include <opencv2/highgui/highgui.hpp>
+#include <opencv2/highgui/highgui_c.h>
+#include <opencv2/imgproc/imgproc.hpp>
 namespace caffe {
 
 template <typename Dtype>
@@ -211,9 +215,77 @@ void Solver<Dtype>::Step(int iters) {
       smoothed_loss += (loss - losses[idx]) / average_loss;
       losses[idx] = loss;
     }
-    if (display) {
+    const vector<Blob<Dtype>*>& result = net_->output_blobs();
+    bool bad_iter = (this->iter_>60000 && loss>5000);
+    if (display || bad_iter) {
       LOG(INFO) << "Iteration " << iter_ << ", loss = " << smoothed_loss;
-      const vector<Blob<Dtype>*>& result = net_->output_blobs();
+      //Visualization code added by Tao.
+      bool predict_depth = true;
+      bool depth_only = true;
+      string img_str("data");
+      string pix_str("pixel-conv");
+      string reg_str("bb-output");
+      if (bad_iter)
+      {  
+        pix_str = "pixel-label";
+        reg_str = "bb-label";
+      }
+      // copy labels and predictions out
+      const shared_ptr<Blob<Dtype> > img_blob = net_->blob_by_name(img_str);
+      const shared_ptr<Blob<Dtype> > pix_blob = net_->blob_by_name(pix_str);
+      const shared_ptr<Blob<Dtype> > reg_blob = net_->blob_by_name(reg_str);
+      vector<cv::Mat> save_imgs;
+      const Dtype* pix_start = pix_blob->cpu_data();
+      const Dtype* bb_start = reg_blob->cpu_data();
+      const Dtype* data_start = img_blob->cpu_data();
+      //LOG(INFO) << "pixel-label " << pix_blob->num()<<" "<<pix_blob->channels()<<" "<<pix_blob->height()<<" "<<pix_blob->width();
+      //LOG(INFO) << "bb-label " << reg_blob->num()<<" "<<reg_blob->channels()<<" "<<reg_blob->height()<<" "<<reg_blob->width();
+      //LOG(INFO) << "data " << img_blob->num()<<" "<<img_blob->channels()<<" "<<img_blob->height()<<" "<<img_blob->width();
+      for(int n=0; n<img_blob->num(); ++n)
+      {
+        cv::Mat curr_img = cv::Mat(img_blob->height(), img_blob->width(), CV_32FC3);
+        for(int kk=0; kk<img_blob->channels();++kk)
+        {
+          for(int yy=0; yy<img_blob->height();++yy)
+          {
+            for(int xx=0; xx<img_blob->width();++xx)
+            {
+              curr_img.at<cv::Vec3f>(yy,xx)[kk]=*(data_start+(((n*img_blob->channels() + kk) * img_blob->height() + yy) * img_blob->width() + xx));
+            }
+          }
+        }
+        save_imgs.push_back(curr_img); 
+      }
+      // draw ground truth and predictions on image.
+      string save_dir("/scr/twangcat/caffenet_results/train/");
+      int quad_height = pix_blob->height();
+      int quad_width = pix_blob->width();
+      int batch_size = pix_blob->num();
+      int grid_dim=4;//8; //4
+      int grid_length = grid_dim*grid_dim;
+      int label_height = quad_height*grid_dim;
+      int label_width = quad_width*grid_dim;
+      int num_regression=predict_depth ? 6:4;
+      num_regression = depth_only? 1:num_regression;
+      double scaling = 8.0;//4.0; //8.0// ratio of image size to pix label size
+      for(int n=0; n<batch_size; ++n){
+        int image_id = (this->iter_/param_.display())*batch_size+n;
+        cv::Mat save_img = save_imgs[n];
+        std::ostringstream stringStream;
+        stringStream <<save_dir<< "img"<<image_id<<"_"<<Caffe::mpi()->rank();
+        if(bad_iter)
+          stringStream <<"_bad"<<iter_;
+        stringStream <<".png";
+        std::string save_name = stringStream.str();
+        LOG(INFO)<< save_name;
+        const Dtype* pix_label = pix_start+n*grid_length*quad_height*quad_width;
+        const Dtype* reg_label = bb_start+n*num_regression*grid_length*quad_height*quad_width;
+        drawResults<Dtype>(save_img, pix_label, reg_label, depth_only, 
+                           predict_depth, scaling, 
+                           quad_height, quad_width, grid_dim,bad_iter);
+        cv::imwrite(save_name, save_img);
+      }
+      //end visualization code
       int score_index = 0;
       for (int j = 0; j < result.size(); ++j) {
         const Dtype* result_vec = result[j]->cpu_data();
@@ -234,9 +306,30 @@ void Solver<Dtype>::Step(int iters) {
       }
     }
 
+    // logging objective to file
+    std::ostringstream stringStream;
+    stringStream <<"/deep/group/driving_data/twangcat/caffe_models/objlog_rank_pretrained_Vshape_strict_imagenet"<<Caffe::mpi()->rank();
+    std::string objlog_name = stringStream.str();
+    std::ofstream objfile (objlog_name.c_str(),ios::app);
+    for (int j = 0; j < result.size(); ++j) {
+      const Dtype* result_vec = result[j]->cpu_data();
+      const string& output_name =
+        net_->blob_names()[net_->output_blob_indices()[j]];
+      const Dtype loss_weight =
+        net_->blob_loss_weights()[net_->output_blob_indices()[j]];
+      double loss_sum = 0.0;
+      for (int k = 0; k < result[j]->count(); ++k) {
+        loss_sum += result_vec[k];
+      }
+      ostringstream loss_msg_stream;
+      objfile<<loss_sum<<" ";
+    }
+    objfile<<std::endl;
+    objfile.close();
     SyncDiff();
     ComputeUpdateValue();
     net_->Update();
+    // end logging to file
 
     // Save a snapshot if needed.
     if (param_.snapshot() && (iter_ + 1) % param_.snapshot() == 0) {

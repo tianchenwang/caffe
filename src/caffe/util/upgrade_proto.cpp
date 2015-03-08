@@ -470,6 +470,8 @@ bool UpgradeV0LayerParameter(const V1LayerParameter& v0_layer_connection,
 V1LayerParameter_LayerType UpgradeV0LayerType(const string& type) {
   if (type == "accuracy") {
     return V1LayerParameter_LayerType_ACCURACY;
+  } else if (type == "blob_writer") {
+    return V1LayerParameter_LayerType_BLOB_WRITER;
   } else if (type == "bnll") {
     return V1LayerParameter_LayerType_BNLL;
   } else if (type == "concat") {
@@ -504,6 +506,8 @@ V1LayerParameter_LayerType UpgradeV0LayerType(const string& type) {
     return V1LayerParameter_LayerType_LRN;
   } else if (type == "lrnk") {
     return V1LayerParameter_LayerType_LRNK;
+  } else if (type == "multilane_label") {
+    return V1LayerParameter_LayerType_MULTILANE_LABEL;
   } else if (type == "multinomial_logistic_loss") {
     return V1LayerParameter_LayerType_MULTINOMIAL_LOGISTIC_LOSS;
   } else if (type == "pool") {
@@ -524,6 +528,8 @@ V1LayerParameter_LayerType UpgradeV0LayerType(const string& type) {
     return V1LayerParameter_LayerType_TILING;
   } else if (type == "window_data") {
     return V1LayerParameter_LayerType_WINDOW_DATA;
+  } else if (type == "video_data") {
+    return V1LayerParameter_LayerType_VIDEO_DATA;
   } else {
     LOG(FATAL) << "Unknown layer name: " << type;
     return V1LayerParameter_LayerType_NONE;
@@ -857,6 +863,8 @@ const char* UpgradeV1LayerType(const V1LayerParameter_LayerType type) {
     return "Accuracy";
   case V1LayerParameter_LayerType_ARGMAX:
     return "ArgMax";
+  case V1LayerParameter_LayerType_BLOB_WRITER:
+    return "BlobWriter";
   case V1LayerParameter_LayerType_BNLL:
     return "BNLL";
   case V1LayerParameter_LayerType_CONCAT:
@@ -905,6 +913,8 @@ const char* UpgradeV1LayerType(const V1LayerParameter_LayerType type) {
     return "LRNK";
   case V1LayerParameter_LayerType_MEMORY_DATA:
     return "MemoryData";
+  case V1LayerParameter_LayerType_MULTILANE_LABEL:
+    return "MultilaneLabel";
   case V1LayerParameter_LayerType_MULTINOMIAL_LOGISTIC_LOSS:
     return "MultinomialLogisticLoss";
   case V1LayerParameter_LayerType_MVN:
@@ -935,6 +945,8 @@ const char* UpgradeV1LayerType(const V1LayerParameter_LayerType type) {
     return "Tiling";
   case V1LayerParameter_LayerType_WINDOW_DATA:
     return "WindowData";
+  case V1LayerParameter_LayerType_VIDEO_DATA:
+    return "VideoData";
   case V1LayerParameter_LayerType_THRESHOLD:
     return "Threshold";
   default:

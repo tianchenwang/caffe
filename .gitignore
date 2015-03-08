@@ -30,7 +30,7 @@
 .ipynb_checkpoints
 
 # Editor temporaries
-*.swp
+*.sw?
 *~
 
 # Sublime Text settings
@@ -94,4 +94,9 @@ CURRENT
 MANIFEST-*
 
 # emacs
+\#*\#
+.\#*
 TAGS
+
+# python label reader time logs
+caffe_python_time*
