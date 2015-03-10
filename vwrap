@@ -1,0 +1,10 @@
+#!/bin/bash
+trap "kill $(jobs -p) &>/dev/null" EXIT INT TERM
+
+echo $VIRTUAL_ENV
+
+if [[ ! -z "$VIRTUAL_ENV" ]]; then
+    source $VIRTUAL_ENV/bin/activate
+fi
+
+./build/tools/caffe $*

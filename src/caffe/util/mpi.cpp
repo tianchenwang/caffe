@@ -27,7 +27,8 @@ bool distributed = false;
 }
 
 void caffe_init_mpi(int* pargc, char*** pargv) {
-  const char* local_rank_env = std::getenv("MV2_COMM_WORLD_LOCAL_RANK");
+  //const char* local_rank_env = std::getenv("MV2_COMM_WORLD_LOCAL_RANK");
+  const char* local_rank_env = std::getenv("OMPI_COMM_WORLD_LOCAL_RANK");
   shared_ptr<MPI> mpi;
   // We have launched with mpirun_rsh and will use MPI
   if (local_rank_env) {
@@ -37,7 +38,7 @@ void caffe_init_mpi(int* pargc, char*** pargv) {
     Caffe::SetDevice(local_rank);
     int provided, requested = MPI_THREAD_MULTIPLE;
     MPI_CHECK(MPI_Init_thread(pargc, pargv, requested, &provided));
-    CHECK_EQ(requested, provided) << "Thread level provided is too low";
+    //CHECK_EQ(requested, provided) << "Thread level provided is too low";
     mpi.reset(new MPIDist());
     Caffe::set_device_state(Caffe::FIXED);
     LOG(INFO) << "Rank: " << mpi->rank() << " set device to: "

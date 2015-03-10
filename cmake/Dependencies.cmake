@@ -2,7 +2,7 @@
 set(Caffe_LINKER_LIBS "")
 
 # ---[ Boost
-find_package(Boost 1.46 REQUIRED COMPONENTS system thread)
+find_package(Boost 1.46 REQUIRED COMPONENTS system thread python numpy)
 include_directories(SYSTEM ${Boost_INCLUDE_DIR})
 list(APPEND Caffe_LINKER_LIBS ${Boost_LIBRARIES})
 
@@ -131,9 +131,9 @@ if(BUILD_python)
     find_package(PythonInterp 2.7)
     find_package(PythonLibs 2.7)
     find_package(NumPy 1.7.1)
-    find_package(Boost 1.46 COMPONENTS python)
+    find_package(Boost 1.46 COMPONENTS python numpy)
   endif()
-  if(PYTHONLIBS_FOUND AND NUMPY_FOUND AND Boost_PYTHON_FOUND)
+  if(PYTHONLIBS_FOUND AND NUMPY_FOUND AND Boost_PYTHON_FOUND AND Boost_NUMPY_FOUND)
     set(HAVE_PYTHON TRUE)
   endif()
 endif()

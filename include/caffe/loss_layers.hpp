@@ -87,6 +87,51 @@ class AccuracyLayer : public Layer<Dtype> {
   Dtype denominator_;
 };
 
+
+template <typename Dtype>
+class BlobWriterLayer : public Layer<Dtype> {
+ public:
+  /**
+   * @param param provides BlobWriterParameter blob_writer_param,
+   *     with BlobWriterLayer options:
+   *   - prefix (prefix of output protobuf file path).
+   */
+  explicit BlobWriterLayer(const LayerParameter& param)
+      : Layer<Dtype>(param) {}
+  virtual void LayerSetUp(
+      const vector<Blob<Dtype>*>& bottom, const vector<Blob<Dtype>*>& top);
+ 
+  virtual void Reshape(
+      const vector<Blob<Dtype>*>& bottom, const vector<Blob<Dtype>*>& top);
+
+  virtual inline const char* type() const { return "BlobWriter"; }
+
+  virtual inline int ExactNumBottomBlobs() const { return -1; }
+  virtual inline int MinBottomBlobs() const { return 1; }
+  virtual inline int MaxBottomBlobs() const { return 100; }
+
+ protected:
+  virtual void Forward_cpu(const vector<Blob<Dtype>*>& bottom,
+      const vector<Blob<Dtype>*>& top);
+
+
+  /// @brief Not implemented -- BlobWriterLayer cannot be used as a loss.
+  virtual void Backward_cpu(const vector<Blob<Dtype>*>& top,
+      const vector<bool>& propagate_down, const vector<Blob<Dtype>*>& bottom) {
+    for (int i = 0; i < propagate_down.size(); ++i) {
+      if (propagate_down[i]) { NOT_IMPLEMENTED; }
+    }
+  }
+
+  int batch_size_;
+  int iter_;
+  std::string prefix_;
+  
+};
+
+
+
+
 /**
  * @brief An interface for Layer%s that take two Blob%s as input -- usually
  *        (1) predictions and (2) ground-truth labels -- and output a

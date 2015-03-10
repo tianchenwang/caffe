@@ -310,6 +310,12 @@ bool UpgradeV0LayerParameter(const V1LayerParameter& v0_layer_connection,
       } else if (type == "images") {
         layer_param->mutable_image_data_param()->set_source(
             v0_layer_param.source());
+      } else if (type == "multilane_label") {
+        layer_param->mutable_multilane_label_param()->set_source(
+            v0_layer_param.source());
+      } else if (type == "video_data") {
+        layer_param->mutable_video_data_param()->set_source(
+            v0_layer_param.source());
       } else if (type == "window_data") {
         layer_param->mutable_window_data_param()->set_source(
             v0_layer_param.source());
@@ -321,6 +327,15 @@ bool UpgradeV0LayerParameter(const V1LayerParameter& v0_layer_connection,
         is_fully_compatible = false;
       }
     }
+    /*
+    if (v0_layer_param.has_prefix()) {
+      if (type == "blob_writer") {
+        layer_param->mutable_blob_writer_param()->set_prefix(v0_layer_param.prefix());
+      } else {
+        LOG(ERROR) << "Unknown parameter prefix for layer type " << type;
+        is_fully_compatible = false;
+      }
+    }*/
     if (v0_layer_param.has_scale()) {
       layer_param->mutable_transform_param()->
           set_scale(v0_layer_param.scale());
@@ -338,6 +353,12 @@ bool UpgradeV0LayerParameter(const V1LayerParameter& v0_layer_connection,
             v0_layer_param.batchsize());
       } else if (type == "images") {
         layer_param->mutable_image_data_param()->set_batch_size(
+            v0_layer_param.batchsize());
+      } else if (type == "multilane_label") {
+        layer_param->mutable_multilane_label_param()->set_batch_size(
+            v0_layer_param.batchsize());
+      } else if (type == "video_data") {
+        layer_param->mutable_video_data_param()->set_batch_size(
             v0_layer_param.batchsize());
       } else if (type == "window_data") {
         layer_param->mutable_window_data_param()->set_batch_size(
@@ -362,6 +383,12 @@ bool UpgradeV0LayerParameter(const V1LayerParameter& v0_layer_connection,
       } else if (type == "images") {
         layer_param->mutable_image_data_param()->set_rand_skip(
             v0_layer_param.rand_skip());
+      } else if (type == "multilane_label") {
+        layer_param->mutable_multilane_label_param()->set_rand_skip(
+            v0_layer_param.rand_skip());
+      } else if (type == "video_data") {
+        layer_param->mutable_video_data_param()->set_rand_skip(
+            v0_layer_param.rand_skip());
       } else {
         LOG(ERROR) << "Unknown parameter rand_skip for layer type " << type;
         is_fully_compatible = false;
@@ -370,6 +397,12 @@ bool UpgradeV0LayerParameter(const V1LayerParameter& v0_layer_connection,
     if (v0_layer_param.has_shuffle_images()) {
       if (type == "images") {
         layer_param->mutable_image_data_param()->set_shuffle(
+            v0_layer_param.shuffle_images());
+      } else if (type == "multilane_label") {
+        layer_param->mutable_multilane_label_param()->set_shuffle(
+            v0_layer_param.shuffle_images());
+      } else if (type == "video_data") {
+        layer_param->mutable_video_data_param()->set_shuffle(
             v0_layer_param.shuffle_images());
       } else {
         LOG(ERROR) << "Unknown parameter shuffle for layer type " << type;
@@ -380,6 +413,12 @@ bool UpgradeV0LayerParameter(const V1LayerParameter& v0_layer_connection,
       if (type == "images") {
         layer_param->mutable_image_data_param()->set_new_height(
             v0_layer_param.new_height());
+      } else if (type == "multilane_label") {
+        layer_param->mutable_multilane_label_param()->set_new_height(
+            v0_layer_param.new_height());
+      } else if (type == "video_data") {
+        layer_param->mutable_video_data_param()->set_new_height(
+            v0_layer_param.new_height());
       } else {
         LOG(ERROR) << "Unknown parameter new_height for layer type " << type;
         is_fully_compatible = false;
@@ -389,6 +428,12 @@ bool UpgradeV0LayerParameter(const V1LayerParameter& v0_layer_connection,
       if (type == "images") {
         layer_param->mutable_image_data_param()->set_new_width(
             v0_layer_param.new_width());
+      } else if (type == "multilane_label") {
+        layer_param->mutable_multilane_label_param()->set_new_width(
+            v0_layer_param.new_height());
+      } else if (type == "video_data") {
+        layer_param->mutable_video_data_param()->set_new_width(
+            v0_layer_param.new_height());
       } else {
         LOG(ERROR) << "Unknown parameter new_width for layer type " << type;
         is_fully_compatible = false;
@@ -470,6 +515,8 @@ bool UpgradeV0LayerParameter(const V1LayerParameter& v0_layer_connection,
 V1LayerParameter_LayerType UpgradeV0LayerType(const string& type) {
   if (type == "accuracy") {
     return V1LayerParameter_LayerType_ACCURACY;
+  } else if (type == "blob_writer") {
+    return V1LayerParameter_LayerType_BLOB_WRITER;
   } else if (type == "bnll") {
     return V1LayerParameter_LayerType_BNLL;
   } else if (type == "concat") {
@@ -504,6 +551,8 @@ V1LayerParameter_LayerType UpgradeV0LayerType(const string& type) {
     return V1LayerParameter_LayerType_LRN;
   } else if (type == "lrnk") {
     return V1LayerParameter_LayerType_LRNK;
+  } else if (type == "multilane_label") {
+    return V1LayerParameter_LayerType_MULTILANE_LABEL;
   } else if (type == "multinomial_logistic_loss") {
     return V1LayerParameter_LayerType_MULTINOMIAL_LOGISTIC_LOSS;
   } else if (type == "pool") {
@@ -524,6 +573,8 @@ V1LayerParameter_LayerType UpgradeV0LayerType(const string& type) {
     return V1LayerParameter_LayerType_TILING;
   } else if (type == "window_data") {
     return V1LayerParameter_LayerType_WINDOW_DATA;
+  } else if (type == "video_data") {
+    return V1LayerParameter_LayerType_VIDEO_DATA;
   } else {
     LOG(FATAL) << "Unknown layer name: " << type;
     return V1LayerParameter_LayerType_NONE;
@@ -541,6 +592,20 @@ bool NetNeedsDataUpgrade(const NetParameter& net_param) {
     }
     if (net_param.layers(i).type() == V1LayerParameter_LayerType_IMAGE_DATA) {
       ImageDataParameter layer_param = net_param.layers(i).image_data_param();
+      if (layer_param.has_scale()) { return true; }
+      if (layer_param.has_mean_file()) { return true; }
+      if (layer_param.has_crop_size()) { return true; }
+      if (layer_param.has_mirror()) { return true; }
+    }
+    if (net_param.layers(i).type() == V1LayerParameter_LayerType_VIDEO_DATA) {
+      VideoDataParameter layer_param = net_param.layers(i).video_data_param();
+      if (layer_param.has_scale()) { return true; }
+      if (layer_param.has_mean_file()) { return true; }
+      if (layer_param.has_crop_size()) { return true; }
+      if (layer_param.has_mirror()) { return true; }
+    }
+    if (net_param.layers(i).type() == V1LayerParameter_LayerType_MULTILANE_LABEL) {
+      MultilaneLabelParameter layer_param = net_param.layers(i).multilane_label_param();
       if (layer_param.has_scale()) { return true; }
       if (layer_param.has_mean_file()) { return true; }
       if (layer_param.has_crop_size()) { return true; }
@@ -587,6 +652,7 @@ void UpgradeNetDataTransformation(NetParameter* net_param) {
   for (int i = 0; i < net_param->layers_size(); ++i) {
     CONVERT_LAYER_TRANSFORM_PARAM(DATA, Data, data);
     CONVERT_LAYER_TRANSFORM_PARAM(IMAGE_DATA, ImageData, image_data);
+    CONVERT_LAYER_TRANSFORM_PARAM(VIDEO_DATA, VideoData, video_data);
     CONVERT_LAYER_TRANSFORM_PARAM(WINDOW_DATA, WindowData, window_data);
   }
 }
@@ -724,6 +790,10 @@ bool UpgradeV1LayerParameter(const V1LayerParameter& v1_layer_param,
     layer_param->mutable_argmax_param()->CopyFrom(
         v1_layer_param.argmax_param());
   }
+  if (v1_layer_param.has_blob_writer_param()) {
+    layer_param->mutable_blob_writer_param()->CopyFrom(
+        v1_layer_param.blob_writer_param());
+  }
   if (v1_layer_param.has_concat_param()) {
     layer_param->mutable_concat_param()->CopyFrom(
         v1_layer_param.concat_param());
@@ -788,6 +858,10 @@ bool UpgradeV1LayerParameter(const V1LayerParameter& v1_layer_param,
     layer_param->mutable_memory_data_param()->CopyFrom(
         v1_layer_param.memory_data_param());
   }
+  if (v1_layer_param.has_multilane_label_param()) {
+    layer_param->mutable_multilane_label_param()->CopyFrom(
+        v1_layer_param.multilane_label_param());
+  }
   if (v1_layer_param.has_mvn_param()) {
     layer_param->mutable_mvn_param()->CopyFrom(
         v1_layer_param.mvn_param());
@@ -828,6 +902,10 @@ bool UpgradeV1LayerParameter(const V1LayerParameter& v1_layer_param,
     layer_param->mutable_window_data_param()->CopyFrom(
         v1_layer_param.window_data_param());
   }
+  if (v1_layer_param.has_video_data_param()) {
+    layer_param->mutable_video_data_param()->CopyFrom(
+        v1_layer_param.video_data_param());
+  }
   if (v1_layer_param.has_transform_param()) {
     layer_param->mutable_transform_param()->CopyFrom(
         v1_layer_param.transform_param());
@@ -857,6 +935,8 @@ const char* UpgradeV1LayerType(const V1LayerParameter_LayerType type) {
     return "Accuracy";
   case V1LayerParameter_LayerType_ARGMAX:
     return "ArgMax";
+  case V1LayerParameter_LayerType_BLOB_WRITER:
+    return "BlobWriter";
   case V1LayerParameter_LayerType_BNLL:
     return "BNLL";
   case V1LayerParameter_LayerType_CONCAT:
@@ -905,6 +985,8 @@ const char* UpgradeV1LayerType(const V1LayerParameter_LayerType type) {
     return "LRNK";
   case V1LayerParameter_LayerType_MEMORY_DATA:
     return "MemoryData";
+  case V1LayerParameter_LayerType_MULTILANE_LABEL:
+    return "MultilaneLabel";
   case V1LayerParameter_LayerType_MULTINOMIAL_LOGISTIC_LOSS:
     return "MultinomialLogisticLoss";
   case V1LayerParameter_LayerType_MVN:
@@ -935,6 +1017,8 @@ const char* UpgradeV1LayerType(const V1LayerParameter_LayerType type) {
     return "Tiling";
   case V1LayerParameter_LayerType_WINDOW_DATA:
     return "WindowData";
+  case V1LayerParameter_LayerType_VIDEO_DATA:
+    return "VideoData";
   case V1LayerParameter_LayerType_THRESHOLD:
     return "Threshold";
   default:

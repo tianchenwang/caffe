@@ -24,6 +24,7 @@ DataLayer<Dtype>::~DataLayer<Dtype>() {
 template <typename Dtype>
 void DataLayer<Dtype>::DataLayerSetUp(const vector<Blob<Dtype>*>& bottom,
       const vector<Blob<Dtype>*>& top) {
+  LOG(INFO)<<"DATA!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!";
   // Initialize DB
   db_.reset(db::GetDB(this->layer_param_.data_param().backend()));
   db_->Open(this->layer_param_.data_param().source(), db::READ);
