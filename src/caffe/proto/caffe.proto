@@ -307,7 +307,7 @@ message ParamSpec {
 // Update the next available ID when you add a new LayerParameter field.
 //
 // Berkeley LayerParameter next available layer-specific ID: 134 (last added: recurrent_param)
-// Stanford LayerParameter next available layer-specific ID: 1001 (last added: tiling_param)
+// Stanford LayerParameter next available layer-specific ID: 1004 (last added: blob_writer_param)
 message LayerParameter {
   optional string name = 1; // the layer name
   optional string type = 2; // the layer type
@@ -652,8 +652,8 @@ message MultilaneLabelParameter {
   // Whether or not MultilaneLabelLayer should shuffle the list of files at every epoch.
   optional bool shuffle = 8 [default = false];
   // It will also resize images if new_height or new_width are not zero.
-  optional uint32 label_height = 9 [default = 60];
-  optional uint32 label_width = 10 [default = 80];
+  optional uint32 new_height = 9 [default = 60];
+  optional uint32 new_width = 10 [default = 80];
   optional uint32 patch_size = 12 [default = 32];
   optional uint32 grid_dim = 13 [default = 4];
   optional bool depth_only =11 [default = false];
@@ -672,6 +672,7 @@ message MultilaneLabelParameter {
 
 // Message that stores parameters used by VideoDataLayer
 message VideoDataParameter {
+
   // Specify the data source.
   optional string source = 1;
   // Specify the batch size.
@@ -679,13 +680,15 @@ message VideoDataParameter {
   // The rand_skip variable is for the data layer to skip a few data points
   // to avoid all asynchronous sgd clients to start at the same point. The skip
   // point would be set as rand_skip * rand(0,1). Note that rand_skip should not
-  // be larger than the number of keys in the leveldb.
+  // be larger than the number of keys in the database.
   optional uint32 rand_skip = 7 [default = 0];
-  // Whether or not VideoDataLayer should shuffle the list of files at every epoch.
+  // Whether or not ImageLayer should shuffle the list of files at every epoch.
   optional bool shuffle = 8 [default = false];
   // It will also resize images if new_height or new_width are not zero.
   optional uint32 new_height = 9 [default = 0];
   optional uint32 new_width = 10 [default = 0];
+  // Specify if the images are color or gray
+  optional bool is_color = 11 [default = true];
   // DEPRECATED. See TransformationParameter. For data pre-processing, we can do
   // simple scaling and subtracting the data mean, if provided. Note that the
   // mean subtraction is always carried out before scaling.
@@ -697,6 +700,7 @@ message VideoDataParameter {
   // DEPRECATED. See TransformationParameter. Specify if we want to randomly mirror
   // data.
   optional bool mirror = 6 [default = false];
+  optional string root_folder = 12 [default = ""];
 }
 
 

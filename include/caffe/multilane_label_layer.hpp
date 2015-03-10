@@ -23,7 +23,7 @@ class MultilaneLabelLayer : public BasePrefetchingDataLayer<Dtype> {
       : BasePrefetchingDataLayer<Dtype>(param) {}
   virtual ~MultilaneLabelLayer();
   virtual void DataLayerSetUp(const vector<Blob<Dtype>*>& bottom,
-      vector<Blob<Dtype>*>& top);
+      const vector<Blob<Dtype>*>& top);
 
   virtual inline const char* type() const { return "VideoData"; }
   virtual inline int ExactNumBottomBlobs() const { return 0; }

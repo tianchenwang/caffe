@@ -10,7 +10,7 @@ namespace caffe {
 
 template <typename Dtype>
 void BlobWriterLayer<Dtype>::LayerSetUp(
-  const vector<Blob<Dtype>*>& bottom, vector<Blob<Dtype>*>* top) {
+  const vector<Blob<Dtype>*>& bottom, const vector<Blob<Dtype>*>& top) {
   batch_size_ = bottom[0]->num();
   prefix_ = this->layer_param_.blob_writer_param().prefix();
   iter_ = 0;
@@ -18,15 +18,15 @@ void BlobWriterLayer<Dtype>::LayerSetUp(
 
 template <typename Dtype>
 void BlobWriterLayer<Dtype>::Reshape(
-  const vector<Blob<Dtype>*>& bottom, vector<Blob<Dtype>*>* top) {
-  CHECK_EQ(top->size(), 1)
+  const vector<Blob<Dtype>*>& bottom, const vector<Blob<Dtype>*>& top) {
+  CHECK_EQ(top.size(), 1)
       << "top must be a dummy blob of size 1";
-  (*top)[0]->Reshape(1, 1, 1, 1);
+  (top)[0]->Reshape(1, 1, 1, 1);
 }
 
 template <typename Dtype>
 void BlobWriterLayer<Dtype>::Forward_cpu(const vector<Blob<Dtype>*>& bottom,
-    vector<Blob<Dtype>*>* top) {
+    const vector<Blob<Dtype>*>& top) {
   BlobProtoVector blob_proto_vec;
   std::ostringstream stringStream;
   stringStream <<prefix_<< "_batch"<<iter_<<".proto";                          
@@ -41,5 +41,5 @@ void BlobWriterLayer<Dtype>::Forward_cpu(const vector<Blob<Dtype>*>& bottom,
 }
 
 INSTANTIATE_CLASS(BlobWriterLayer);
-
+REGISTER_LAYER_CLASS(BlobWriter);
 }  // namespace caffe

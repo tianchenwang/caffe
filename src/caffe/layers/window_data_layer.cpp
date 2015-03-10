@@ -33,6 +33,7 @@ WindowDataLayer<Dtype>::~WindowDataLayer<Dtype>() {
 template <typename Dtype>
 void WindowDataLayer<Dtype>::DataLayerSetUp(const vector<Blob<Dtype>*>& bottom,
       const vector<Blob<Dtype>*>& top) {
+  LOG(INFO)<<"WINDOW!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!";
   // LayerSetUp runs through the window_file and creates two structures
   // that hold windows: one for foreground (object) windows and one
   // for background (non-object) windows. We use an overlap threshold

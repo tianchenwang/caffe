@@ -150,7 +150,7 @@ void VideoDataLayer<Dtype>::setPerspective() {
 
 template <typename Dtype>
 void VideoDataLayer<Dtype>::DataLayerSetUp(const vector<Blob<Dtype>*>& bottom,
-      vector<Blob<Dtype>*>& top) {
+      const vector<Blob<Dtype>*>& top) {
   const int new_height = this->layer_param_.video_data_param().new_height();
   const int new_width  = this->layer_param_.video_data_param().new_width();
   CHECK((new_height == 0 && new_width == 0) ||
@@ -250,9 +250,11 @@ void VideoDataLayer<Dtype>::DataLayerSetUp(const vector<Blob<Dtype>*>& bottom,
       << top[0]->channels() << "," << top[0]->height() << ","
       << top[0]->width();
   // label
-  vector<int> label_shape(1, batch_size);
-  top[1]->Reshape(label_shape);
-  this->prefetch_label_.Reshape(label_shape);
+  //vector<int> label_shape(1, batch_size);
+  //top[1]->Reshape(label_shape);
+  //  LOG(INFO)<<"5555555555555555555555555555555555555";
+  //this->prefetch_label_.Reshape(label_shape);
+  //  LOG(INFO)<<"6666666666666666666666666666666666666";
 }
 
 template <typename Dtype>
@@ -314,7 +316,7 @@ void VideoDataLayer<Dtype>::InternalThreadEntry() {
     // We have reached the end. Restart from the first.
     DLOG(INFO) << "Restarting data prefetching from start.";
     lines_id_ = Caffe::mpi()->rank();
-    if (this->layer_param_.image_data_param().shuffle()) {
+    if (this->layer_param_.video_data_param().shuffle()) {
       ShuffleBatches();
     }
   }

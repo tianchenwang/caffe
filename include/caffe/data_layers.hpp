@@ -35,6 +35,7 @@ class BaseDataLayer : public Layer<Dtype> {
   // LayerSetUp: implements common data layer setup functionality, and calls
   // DataLayerSetUp to do special data layer setup for individual layer types.
   // This method may not be overridden except by the BasePrefetchingDataLayer.
+  virtual inline const char* type() const { return "BaseData"; }
   virtual void LayerSetUp(const vector<Blob<Dtype>*>& bottom,
       const vector<Blob<Dtype>*>& top);
   virtual void DataLayerSetUp(const vector<Blob<Dtype>*>& bottom,
@@ -311,7 +312,7 @@ class VideoDataLayer : public BasePrefetchingDataLayer<Dtype> {
       : BasePrefetchingDataLayer<Dtype>(param) {}
   virtual ~VideoDataLayer();
   virtual void DataLayerSetUp(const vector<Blob<Dtype>*>& bottom,
-      vector<Blob<Dtype>*>& top);
+      const vector<Blob<Dtype>*>& top);
 
   virtual inline const char* type() const { return "VideoData"; }
   virtual inline int ExactNumBottomBlobs() const { return 0; }

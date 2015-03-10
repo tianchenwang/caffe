@@ -28,11 +28,11 @@ py::object arr_handle;
 
 template <typename Dtype>
 void MultilaneLabelLayer<Dtype>::DataLayerSetUp(const vector<Blob<Dtype>*>& bottom,
-      vector<Blob<Dtype>*>& top) {
-  const int label_height = this->layer_param_.multilane_label_param().label_height();
-  const int label_width  = this->layer_param_.multilane_label_param().label_width();
-  CHECK((label_height > 0 && label_width > 0)) << "Current implementation requires "
-      "label_height and label_width both to be set.";
+      const vector<Blob<Dtype>*>& top) {
+  const int new_height = this->layer_param_.multilane_label_param().new_height();
+  const int new_width  = this->layer_param_.multilane_label_param().new_width();
+  CHECK((new_height > 0 && new_width > 0)) << "Current implementation requires "
+      "new_height and new_width both to be set.";
   // Read the file with filenames and labels
   const string& source = this->layer_param_.multilane_label_param().source();
   LOG(INFO) << "Opening schedule file " << source;
@@ -113,8 +113,8 @@ void MultilaneLabelLayer<Dtype>::DataLayerSetUp(const vector<Blob<Dtype>*>& bott
     this->prefetch_data_.Reshape(batch_size, blob_depth, crop_size,
                                  crop_size);
   } else {
-    top[0]->Reshape(batch_size, blob_depth, label_height/grid_dim,label_width/grid_dim);
-    this->prefetch_data_.Reshape(batch_size, blob_depth, label_height/grid_dim,label_width/grid_dim);
+    top[0]->Reshape(batch_size, blob_depth, new_height/grid_dim,new_width/grid_dim);
+    this->prefetch_data_.Reshape(batch_size, blob_depth, new_height/grid_dim,new_width/grid_dim);
   }
   LOG(INFO) << "output data size: " << top[0]->num() << ","
       << top[0]->channels() << "," << top[0]->height() << ","
@@ -125,9 +125,9 @@ void MultilaneLabelLayer<Dtype>::DataLayerSetUp(const vector<Blob<Dtype>*>& bott
   this->prefetch_label_.Reshape(label_shape);
   //// datum size
   //this->datum_channels_ = blob_depth;
-  //this->datum_height_ = label_height/grid_dim;
-  //this->datum_width_ = label_width/grid_dim;
-  //this->datum_size_ = label_height*label_width;
+  //this->datum_height_ = new_height/grid_dim;
+  //this->datum_width_ = new_width/grid_dim;
+  //this->datum_size_ = new_height*new_width;
 }
 
 template <typename Dtype>
@@ -146,8 +146,8 @@ void MultilaneLabelLayer<Dtype>::InternalThreadEntry() {
   Dtype* top_data = this->prefetch_data_.mutable_cpu_data();
   MultilaneLabelParameter multilane_label_param = this->layer_param_.multilane_label_param();
   const int batch_size = multilane_label_param.batch_size();
-  const int label_height = multilane_label_param.label_height();
-  const int label_width = multilane_label_param.label_width();
+  const int new_height = multilane_label_param.new_height();
+  const int new_width = multilane_label_param.new_width();
   const int grid_dim = multilane_label_param.grid_dim();
 
   // datum scales
@@ -182,7 +182,7 @@ void MultilaneLabelLayer<Dtype>::InternalThreadEntry() {
     if(!this->pyModule){
       this->pyModule = py::import("multilane_label_reader");
       this->pyClass = this->pyModule.attr("MultilaneLabelReader");
-      this->pyReader = this->pyClass(Caffe::mpi()->rank(),depth_only, label_width, label_height, grid_dim, batch_size);
+      this->pyReader = this->pyClass(Caffe::mpi()->rank(),depth_only, new_width, new_height, grid_dim, batch_size);
     }
     np::dtype dt = np::dtype::get_builtin<int>();
     py::tuple shape = py::make_tuple(batch_size) ;
@@ -211,7 +211,7 @@ void MultilaneLabelLayer<Dtype>::InternalThreadEntry() {
     // We have reached the end. Restart from the first.
     DLOG(INFO) << "Restarting data prefetching from start.";
     lines_id_ = Caffe::mpi()->rank();
-    if (this->layer_param_.image_data_param().shuffle()) {
+    if (this->layer_param_.multilane_label_param().shuffle()) {
       ShuffleBatches();
     }
   }
@@ -220,5 +220,5 @@ void MultilaneLabelLayer<Dtype>::InternalThreadEntry() {
 }
 
 INSTANTIATE_CLASS(MultilaneLabelLayer);
-
+REGISTER_LAYER_CLASS(MultilaneLabel);
 }  // namespace caffe

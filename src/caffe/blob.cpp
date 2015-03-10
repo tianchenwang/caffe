@@ -34,9 +34,10 @@ void Blob<Dtype>::Reshape(const vector<int>& shape) {
   }
   if (count_ > capacity_) {
     capacity_ = count_;
-    LOG(INFO)<<"Setting blob data_ with capacity = "<<capacity_;
     data_.reset(new SyncedMemory(capacity_ * sizeof(Dtype)));
+    CHECK(data_);
     diff_.reset(new SyncedMemory(capacity_ * sizeof(Dtype)));
+    CHECK(diff_);
   }
 }
 
@@ -146,14 +147,13 @@ template <> void Blob<int>::SyncData() { NOT_IMPLEMENTED; }
 template <typename Dtype>
 void Blob<Dtype>::SyncData() {
   shared_ptr<MPI> mpi = Caffe::mpi();
+  mpi->Allreduce(count_, mutable_cpu_data());
   switch (Caffe::mode()) {
     case Caffe::CPU:
-      mpi->Allreduce(count_, mutable_cpu_data());
       caffe_scal(count_, 1/Dtype(mpi->size()), mutable_cpu_data());
       break;
     case Caffe::GPU:
 #ifndef CPU_ONLY
-      mpi->Allreduce(count_, mutable_gpu_data());
       caffe_gpu_scal(count_, 1/Dtype(mpi->size()), mutable_gpu_data());
 #else
       NO_GPU;
@@ -173,14 +173,13 @@ template <> void Blob<int>::SyncDiff() { NOT_IMPLEMENTED; }
 template <typename Dtype>
 void Blob<Dtype>::SyncDiff() {
   shared_ptr<MPI> mpi = Caffe::mpi();
+  mpi->Allreduce(count_, mutable_cpu_diff());
   switch (Caffe::mode()) {
     case Caffe::CPU:
-      mpi->Allreduce(count_, mutable_cpu_diff());
       caffe_scal(count_, 1/Dtype(mpi->size()), mutable_cpu_diff());
       break;
     case Caffe::GPU:
 #ifndef CPU_ONLY
-      mpi->Allreduce(count_, mutable_gpu_diff());
       caffe_gpu_scal(count_, 1/Dtype(mpi->size()), mutable_gpu_diff());
 #else
       NO_GPU;
