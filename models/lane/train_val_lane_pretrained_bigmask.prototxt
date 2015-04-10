@@ -1,0 +1,536 @@
+name: "LaneNet"
+
+# Training input.
+layers {
+  name: "data"
+  type: VIDEO_DATA
+  top: "data"
+  video_data_param {
+    #source: "/scail/group/deeplearning/driving_data/twangcat/schedules/q50_multilane_planar_train_schedule1_batch40_2cam.txt"
+    source: "/scail/group/deeplearning/driving_data/twangcat/schedules/q50_multilane_planar_train_schedule_Vshape_batch20_strict_2cam.txt"
+    batch_size: 20
+    #rand_skip: 38000
+  }
+  transform_param {
+    mean_file: "driving_img_mean.binaryproto"
+  }
+  include: { phase: TRAIN }
+}
+
+#  lane pixel label and regression label.
+layers {
+  name: "label"
+  type: MULTILANE_LABEL
+  top: "label"
+  multilane_label_param {
+    #source: "/scail/group/deeplearning/driving_data/twangcat/schedules/q50_multilane_planar_train_schedule1_batch40_2cam.txt"
+    source: "/scail/group/deeplearning/driving_data/twangcat/schedules/q50_multilane_planar_train_schedule_Vshape_batch20_strict_2cam.txt"
+    batch_size: 20
+    depth_only: true
+    label_height: 120
+    label_width: 160
+    grid_dim: 8
+    
+    #rand_skip: 38000
+  }
+  include: { phase: TRAIN }
+}
+
+# Test input.
+layers {
+  name: "data"
+  type: VIDEO_DATA
+  top: "data"
+  video_data_param {
+    #source: "/scail/group/deeplearning/driving_data/twangcat/schedules/q50_multilane_planar_test_schedule-4-10-14-pleasanton_batch10_2cam.txt"
+    source: "/scail/group/deeplearning/driving_data/twangcat/schedules/q50_multilane_planar_test_schedule_8-1-14-monterey-ToMontery_c1.avi_batch10.txt"
+    #source: "/scail/group/deeplearning/driving_data/twangcat/schedules/q50_multilane_planar_test_schedule_4-10-14-pleasanton-all.avi_batch10.txt"
+    batch_size: 10
+  }
+  transform_param {
+    mean_file: "driving_img_mean.binaryproto"
+  }
+  include: { phase: TEST }
+}
+
+#  lane pixel label and regression label.
+layers {
+  name: "label"
+  type: MULTILANE_LABEL
+  top: "label"
+  multilane_label_param {
+    #source: "/scail/group/deeplearning/driving_data/twangcat/schedules/q50_multilane_planar_test_schedule-4-10-14-pleasanton_batch10_2cam.txt"
+    source: "/scail/group/deeplearning/driving_data/twangcat/schedules/q50_multilane_planar_test_schedule_8-1-14-monterey-ToMontery_c1.avi_batch10.txt"
+    #source: "/scail/group/deeplearning/driving_data/twangcat/schedules/q50_multilane_planar_test_schedule_4-10-14-pleasanton-all.avi_batch10.txt"
+    batch_size: 10
+    depth_only: true
+    label_height: 120
+    label_width: 160
+    grid_dim: 8
+  }
+  include: { phase: TEST }
+}
+
+
+# Splite label layer into pixel and bounding box label.
+layers {
+  name: "slice-label"
+  type: SLICE
+  bottom: "label"
+  top: "pixel-label"
+  top: "bb-label"
+  slice_param {
+    slice_dim: 1
+    slice_point: 64
+  }
+}
+
+# Concatenate the pixel labels 4/6 folds such that it can be used to mask
+# all 4/6 dimensions of the bounding box predictions.
+#layers {
+#  name: "pixel-block"
+#  type: CONCAT
+#  bottom: "pixel-label"
+#  bottom: "pixel-label"
+#  bottom: "pixel-label"
+#  bottom: "pixel-label"
+#  bottom: "pixel-label"
+#  bottom: "pixel-label"
+#  top: "pixel-block"
+#  concat_param {
+#    concat_dim: 1
+#  }
+#}
+
+layers {
+  name: "L0"
+  type: CONVOLUTION
+  bottom: "data"
+  top: "L0"
+  blobs_lr: 1
+  blobs_lr: 1
+  weight_decay: 1
+  weight_decay: 0
+  convolution_param {
+    num_output: 96
+    kernel_size: 11
+    stride: 4
+    weight_filler {
+      type: "gaussian"
+      std: 0.01
+    }
+    bias_filler {
+      type: "constant"
+      value: 0.1
+    }
+  }
+}
+layers {
+  name: "relu1"
+  type: RELU
+  bottom: "L0"
+  top: "L0"
+}
+layers {
+  name: "norm1"
+  type: LRN_FIXED
+  bottom: "L0"
+  top: "norm1"
+  lrn_param {
+    local_size: 5
+    alpha: 0.0001
+    beta: 0.75
+  }
+}
+layers {
+  name: "pool1"
+  type: POOLING
+  bottom: "norm1"
+  top: "pool1"
+  pooling_param {
+    pool: MAX
+    kernel_size: 3
+    stride: 2
+  }
+}
+layers {
+  name: "L1"
+  type: CONVOLUTION
+  bottom: "pool1"
+  top: "L1"
+  blobs_lr: 1
+  blobs_lr: 1
+  weight_decay: 1
+  weight_decay: 0
+  convolution_param {
+    num_output: 256
+    pad: 2
+    kernel_size: 5
+    group: 1
+    weight_filler {
+      type: "gaussian"
+      std: 0.01
+    }
+    bias_filler {
+      type: "constant"
+      value: 0.1
+    }
+  }
+}
+layers {
+  name: "relu2"
+  type: RELU
+  bottom: "L1"
+  top: "L1"
+}
+layers {
+  name: "norm2"
+  type: LRN_FIXED
+  bottom: "L1"
+  top: "norm2"
+  lrn_param {
+    local_size: 5
+    alpha: 0.0001
+    beta: 0.75
+  }
+}
+layers {
+  name: "pool2"
+  type: POOLING
+  bottom: "norm2"
+  top: "pool2"
+  pooling_param {
+    pool: MAX
+    kernel_size: 3
+    stride: 2
+  }
+}
+layers {
+  name: "L2"
+  type: CONVOLUTION
+  bottom: "pool2"
+  top: "L2"
+  blobs_lr: 1
+  blobs_lr: 1
+  weight_decay: 1
+  weight_decay: 0
+  convolution_param {
+    num_output: 384
+    pad: 1
+    kernel_size: 3
+    weight_filler {
+      type: "gaussian"
+      std: 0.01
+    }
+    bias_filler {
+      type: "constant"
+      value: 0.1
+    }
+  }
+}
+layers {
+  name: "relu3"
+  type: RELU
+  bottom: "L2"
+  top: "L2"
+}
+layers {
+  name: "L3"
+  type: CONVOLUTION
+  bottom: "L2"
+  top: "L3"
+  blobs_lr: 1
+  blobs_lr: 1
+  weight_decay: 1
+  weight_decay: 0
+  convolution_param {
+    num_output: 384
+    pad: 1
+    kernel_size: 3
+    group: 1
+    weight_filler {
+      type: "gaussian"
+      std: 0.01
+    }
+    bias_filler {
+      type: "constant"
+      value: 0.1
+    }
+  }
+}
+layers {
+  name: "relu4"
+  type: RELU
+  bottom: "L3"
+  top: "L3"
+}
+layers {
+  name: "L4"
+  type: CONVOLUTION
+  bottom: "L3"
+  top: "L4"
+  blobs_lr: 1
+  blobs_lr: 1
+  weight_decay: 1
+  weight_decay: 0
+  convolution_param {
+    num_output: 384
+    pad: 1
+    kernel_size: 3
+    group: 1
+    weight_filler {
+      type: "gaussian"
+      std: 0.01
+    }
+    bias_filler {
+      type: "constant"
+      value: 0.1
+    }
+  }
+}
+layers {
+  name: "relu5"
+  type: RELU
+  bottom: "L4"
+  top: "L4"
+}
+layers {
+  name: "pool5"
+  type: POOLING
+  bottom: "L4"
+  top: "pool5"
+  pooling_param {
+    pool: MAX
+    kernel_size: 3
+    stride: 2
+  }
+}
+layers {
+  name: "L5"
+  type: CONVOLUTION
+  bottom: "pool5"
+  top: "L5"
+  blobs_lr: 1
+  blobs_lr: 1
+  weight_decay: 1
+  weight_decay: 0
+  convolution_param {
+    num_output: 4096
+    kernel_size: 6
+    pad: 3
+    weight_filler {
+      type: "gaussian"
+      std: 0.01
+    }
+    bias_filler {
+      type: "constant"
+      value: 1
+    }
+  }
+}
+layers {
+  name: "relu6"
+  type: RELU
+  bottom: "L5"
+  top: "L5"
+}
+layers {
+  name: "drop6"
+  type: DROPOUT
+  bottom: "L5"
+  top: "L5"
+  dropout_param {
+    dropout_ratio: 0.5
+  }
+}
+layers {
+  name: "L6"
+  type: CONVOLUTION
+  bottom: "L5"
+  top: "L6"
+  blobs_lr: 1
+  blobs_lr: 1
+  weight_decay: 1
+  weight_decay: 0
+  convolution_param {
+    num_output: 4096
+    kernel_size: 1
+    weight_filler {
+      type: "gaussian"
+      std: 0.01
+    }
+    bias_filler {
+      type: "constant"
+      value: 1
+    }
+  }
+}
+layers {
+  name: "relu7"
+  type: RELU
+  bottom: "L6"
+  top: "L6"
+}
+layers {
+  name: "drop7"
+  type: DROPOUT
+  bottom: "L6"
+  top: "L6"
+  dropout_param {
+    dropout_ratio: 0.5
+  }
+}
+
+layers {
+  name: "bb-output"
+  type: CONVOLUTION
+  bottom: "L6"
+  top: "bb-output"
+  blobs_lr: 1
+  blobs_lr: 1
+  weight_decay: 1
+  weight_decay: 0
+  convolution_param {
+    num_output: 64
+    kernel_size: 1
+    weight_filler {
+      type: "gaussian"
+      std: 0.01
+    }
+    bias_filler {
+      type: "constant"
+      value: 1.0
+    }
+  }
+}
+
+layers {
+  name: "pixel-conv"
+  type: CONVOLUTION
+  bottom: "L6"
+  top: "pixel-conv"
+  blobs_lr: 1
+  blobs_lr: 1
+  weight_decay: 1
+  weight_decay: 0
+  convolution_param {
+    num_output: 64
+    kernel_size: 1
+    weight_filler {
+      type: "gaussian"
+      std: 0.005
+    }
+    bias_filler {
+      type: "constant"
+      value: 1.0
+    }
+  }
+}
+
+# Pixel level logistic prediction.
+#layers {
+#  name: "pixel-prob"
+#  type: SIGMOID
+#  bottom: "pixel-conv"
+#  top: "pixel-prob"
+#}
+
+# Pixel level logistic loss.
+layers {
+  name: "pixel-loss"
+  type: SIGMOID_CROSS_ENTROPY_LOSS
+  bottom: "pixel-conv"
+  bottom: "pixel-label"
+  top: "pixel-loss"
+}
+
+# Masking the regression labels with input label.
+layers {
+  name: "bb-label-mask"
+  type: ELTWISE
+  #bottom: "pixel-block"
+  bottom: "pixel-label"
+  bottom: "bb-label"
+  top: "bb-masked-label"
+  eltwise_param {
+    operation: PROD
+  }
+}
+# Masking the regression predicts with input label.
+layers {
+  name: "bb-prob-mask"
+  type: ELTWISE
+  #bottom: "pixel-block"
+  bottom: "pixel-label"
+  bottom: "bb-output"
+  top: "bb-masked-output"
+  eltwise_param {
+    operation: PROD
+  }
+}
+
+layers {                                                                                                          
+  name: "bb-loss"                                                                                                 
+  type: L1_LOSS                                                                                                   
+  bottom: "bb-masked-output"                                                                                      
+  bottom: "bb-masked-label"                                                                                              
+  top: "bb-loss"                                                                                                  
+  loss_weight: 1                                                                                                  
+}  
+
+# Writing the outputs to protobuf files.
+layers {                                                                                                          
+  name: "blob-writer"                                                                                                 
+  type: BLOB_WRITER                                                                                                   
+  bottom: "pixel-conv"                                                                                      
+  bottom: "bb-output"                                                                                              
+  bottom: "pixel-label"                                                                                              
+  bottom: "bb-masked-label"                                                                                              
+  top: "blob-writer"
+  blob_writer_param {
+    #prefix: "/deep/group/driving_data/twangcat/caffe_results/proto/raw_outputs/4-3-14-gilroy-from_gilroy_g1"
+    #prefix: "/deep/group/driving_data/twangcat/caffe_results/proto/raw_outputs/4-10-14-pleasanton-880n_b2"
+    prefix: "/deep/group/driving_data/twangcat/caffe_results/proto/raw_outputs_bigmask/8-1-14-monterey-ToMonterey_c1-Vshape"
+    #prefix: "/deep/group/driving_data/twangcat/caffe_results/proto/raw_outputs_bigmask/4-10-14-pleasanton-all-Vshape"
+  }
+  include: { phase: TEST }                                                                                                  
+}  
+
+# Squared loss on the bounding boxes.
+#layers {
+#  name: "bb-loss"
+#  type: EUCLIDEAN_LOSS
+#  bottom: "bb-masked-output"
+#  bottom: "bb-label"
+#  top: "bb-loss"
+#  loss_weight: 0.01
+#}
+
+# L1 error loss
+#layers {
+#  name: "bb-diff"
+#  type: ELTWISE
+#  bottom: "bb-label"
+#  bottom: "bb-masked-output"
+#  eltwise_param {
+#    operation: SUM
+#    coeff: 1.0
+#    coeff: -1.0
+#  }
+#  top: "bb-diff"
+#}
+
+#layers {
+#  name: "bb-loss"
+#  type: ABSVAL
+#  bottom: "bb-diff"
+#  top: "bb-loss"
+#  # 1 / (batch_size * 20 * 15 * 64)
+#  loss_weight: 0.00001041666666666
+#}
+
+#layers {
+#  name: "bb-loss-silence"
+#  type: SILENCE
+#  bottom: "bb-loss"
+#}
