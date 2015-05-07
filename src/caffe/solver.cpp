@@ -216,20 +216,16 @@ void Solver<Dtype>::Step(int iters) {
       losses[idx] = loss;
     }
     const vector<Blob<Dtype>*>& result = net_->output_blobs();
-    bool bad_iter = (this->iter_>60000 && loss>5000);
+    bool bad_iter = (this->iter_>20000 && loss>60000);
     if (display || bad_iter) {
       LOG(INFO) << "Iteration " << iter_ << ", loss = " << smoothed_loss;
       //Visualization code added by Tao.
       bool predict_depth = true;
-      bool depth_only = true;
       string img_str("data");
+      //string pix_str("pixel-label");
+      //string reg_str("bb-label");
       string pix_str("pixel-conv");
       string reg_str("bb-output");
-      if (bad_iter)
-      {  
-        pix_str = "pixel-label";
-        reg_str = "bb-label";
-      }
       // copy labels and predictions out
       const shared_ptr<Blob<Dtype> > img_blob = net_->blob_by_name(img_str);
       const shared_ptr<Blob<Dtype> > pix_blob = net_->blob_by_name(pix_str);
@@ -239,7 +235,6 @@ void Solver<Dtype>::Step(int iters) {
       const Dtype* bb_start = reg_blob->cpu_data();
       const Dtype* data_start = img_blob->cpu_data();
       //LOG(INFO) << "pixel-label " << pix_blob->num()<<" "<<pix_blob->channels()<<" "<<pix_blob->height()<<" "<<pix_blob->width();
-      //LOG(INFO) << "bb-label " << reg_blob->num()<<" "<<reg_blob->channels()<<" "<<reg_blob->height()<<" "<<reg_blob->width();
       //LOG(INFO) << "data " << img_blob->num()<<" "<<img_blob->channels()<<" "<<img_blob->height()<<" "<<img_blob->width();
       for(int n=0; n<img_blob->num(); ++n)
       {
@@ -261,13 +256,12 @@ void Solver<Dtype>::Step(int iters) {
       int quad_height = pix_blob->height();
       int quad_width = pix_blob->width();
       int batch_size = pix_blob->num();
-      int grid_dim=4;//8; //4
+      int grid_dim=4;//32
       int grid_length = grid_dim*grid_dim;
       int label_height = quad_height*grid_dim;
       int label_width = quad_width*grid_dim;
       int num_regression=predict_depth ? 6:4;
-      num_regression = depth_only? 1:num_regression;
-      double scaling = 8.0;//4.0; //8.0// ratio of image size to pix label size
+      double scaling = 8.0;//1.0 ratio of image size to pix label size
       for(int n=0; n<batch_size; ++n){
         int image_id = (this->iter_/param_.display())*batch_size+n;
         cv::Mat save_img = save_imgs[n];
@@ -280,9 +274,10 @@ void Solver<Dtype>::Step(int iters) {
         LOG(INFO)<< save_name;
         const Dtype* pix_label = pix_start+n*grid_length*quad_height*quad_width;
         const Dtype* reg_label = bb_start+n*num_regression*grid_length*quad_height*quad_width;
-        drawResults<Dtype>(save_img, pix_label, reg_label, depth_only, 
-                           predict_depth, scaling, 
-                           quad_height, quad_width, grid_dim,bad_iter);
+        drawResults<Dtype>(save_img, pix_label, reg_label, 
+                           predict_depth, scaling, num_regression, 
+                           quad_height, quad_width, grid_dim);
+        //drawResults<Dtype>(save_img, pix_label, scaling, quad_height, quad_width, grid_dim);
         cv::imwrite(save_name, save_img);
       }
       //end visualization code
@@ -308,7 +303,16 @@ void Solver<Dtype>::Step(int iters) {
 
     // logging objective to file
     std::ostringstream stringStream;
-    stringStream <<"/deep/group/driving_data/twangcat/caffe_models/objlog_rank_pretrained_Vshape_strict_imagenet"<<Caffe::mpi()->rank();
+    stringStream <<param_.snapshot_prefix()<<"_objlog"
+                 <<"_nodes"<<Caffe::mpi()->size()
+                 <<"_solver"<<param_.solver_type()
+                 <<"_lr"<<param_.base_lr()
+                 <<"_gamma"<<param_.gamma()
+                 <<"_step"<<param_.stepsize()
+                 <<"_momentum"<<param_.momentum()
+                 <<"_wd"<<param_.weight_decay()
+                 <<"_rank_"<<Caffe::mpi()->rank();
+    
     std::string objlog_name = stringStream.str();
     std::ofstream objfile (objlog_name.c_str(),ios::app);
     for (int j = 0; j < result.size(); ++j) {
@@ -464,7 +468,19 @@ void Solver<Dtype>::Snapshot() {
   state.set_iter(iter_ + 1);
   state.set_learned_net(model_filename);
   state.set_current_step(current_step_);
-  snapshot_filename = filename + ".solverstate";
+  
+  ostringstream stringStream;
+  stringStream <<"_nodes"<<Caffe::mpi()->size()
+               <<"_solver"<<this->param_.solver_type()
+               <<"_lr"<<this->param_.base_lr()
+               <<"_gamma"<<this->param_.gamma()
+               <<"_step"<<this->param_.stepsize()
+               <<"_momentum"<<this->param_.momentum()
+               <<"_wd"<<this->param_.weight_decay()
+               <<"_";
+  string param_string = stringStream.str();
+  
+  snapshot_filename = filename + param_string + ".solverstate";
   LOG(INFO) << "Snapshotting solver state to " << snapshot_filename;
   WriteProtoToBinaryFile(state, snapshot_filename.c_str());
 }

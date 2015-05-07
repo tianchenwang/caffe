@@ -7,8 +7,9 @@ layers {
   top: "data"
   video_data_param {
     #source: "/scail/group/deeplearning/driving_data/twangcat/schedules/q50_multilane_planar_train_schedule1_batch40_2cam.txt"
-    source: "/scail/group/deeplearning/driving_data/twangcat/schedules/q50_multilane_planar_train_schedule_Vshape_batch2_strict2_2cam.txt"
-    batch_size: 2
+    #source: "/scail/group/deeplearning/driving_data/twangcat/schedules/q50_multilane_planar_train_schedule_Vshape_batch2_strict2_2cam.txt"
+    source: "/scail/group/deeplearning/driving_data/twangcat/schedules/q50_multilane_planar_train_schedule1_batch5_2cam.txt"
+    batch_size: 5
     #rand_skip: 38000
   }
   transform_param {
@@ -24,8 +25,9 @@ layers {
   top: "label"
   multilane_label_param {
     #source: "/scail/group/deeplearning/driving_data/twangcat/schedules/q50_multilane_planar_train_schedule1_batch40_2cam.txt"
-    source: "/scail/group/deeplearning/driving_data/twangcat/schedules/q50_multilane_planar_train_schedule_Vshape_batch2_strict2_2cam.txt"
-    batch_size: 2
+    #source: "/scail/group/deeplearning/driving_data/twangcat/schedules/q50_multilane_planar_train_schedule_Vshape_batch2_strict2_2cam.txt"
+    source: "/scail/group/deeplearning/driving_data/twangcat/schedules/q50_multilane_planar_train_schedule1_batch5_2cam.txt"
+    batch_size: 5
     depth_only: false
     new_height: 60
     new_width: 80
@@ -491,7 +493,7 @@ layers {
     #prefix: "/deep/group/driving_data/twangcat/caffe_results/proto/raw_outputs/4-3-14-gilroy-from_gilroy_g1"
     #prefix: "/deep/group/driving_data/twangcat/caffe_results/proto/raw_outputs/4-10-14-pleasanton-880n_b2"
     #prefix: "/deep/group/driving_data/twangcat/caffe_results/proto/raw_outputs/4-11-14-sanrafael-sanrafael_e1_split9"
-    prefix: "/deep/group/driving_data/twangcat/caffe_results/proto/raw_outputs/4-10-14-pleasanton-all-Vshape"
+    prefix: "/deep/group/driving_data/twangcat/caffe_results/proto/raw_outputs/4-10-14-pleasanton-all-Vshape-New"
   }
   include: { phase: TEST }                                                                                                  
 }  

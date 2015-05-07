@@ -11,7 +11,7 @@ Generates a training schedule so that the video data loader in caffe reads direc
 """
 def main(rootdir, batchsize, exclude_list):
     cam_num = 2
-    num_distortions = 7
+    num_distortions = 1
     root_to_prefix = rootdir if rootdir[-1] is not '/' else rootdir[:-1]
     pref = os.path.basename(root_to_prefix) + '_'
     visited_prefix = set([])
@@ -70,7 +70,10 @@ def main(rootdir, batchsize, exclude_list):
 
         for dd in xrange(num_distortions):
           frame_nums = np.arange(start_frame, end_frame)
-          persp_ids = (frame_nums+dd)%num_distortions # perspective id to use
+          if num_distortions>1:
+            persp_ids = (frame_nums+dd)%num_distortions # perspective id to use
+          else:
+            persp_ids = np.ones(frame_nums.shape)*6 # use identity matrix for distortion.
           random.shuffle(frame_nums)
           persp_ids = persp_ids[frame_nums-start_frame]
           frame_nums = frame_nums[0:clipped_length] # take batches of 'batchsize' and throw away remainders.

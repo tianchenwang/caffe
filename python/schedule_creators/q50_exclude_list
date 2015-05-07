@@ -1,0 +1,31 @@
+/scail/group/deeplearning/driving_data/640x480_Q50/3-7-14-280/280S_a 0 0.95
+/scail/group/deeplearning/driving_data/640x480_Q50/3-7-14-280/vail_a
+/scail/group/deeplearning/driving_data/640x480_Q50/3-7-14-280/280S_b
+/scail/group/deeplearning/driving_data/640x480_Q50/3-13-14-101/101S_f 0.0 0.5
+/scail/group/deeplearning/driving_data/640x480_Q50/3-13-14-101/101S_g 0.0 0.75
+/scail/group/deeplearning/driving_data/640x480_Q50/3-14-14-101/101south_c 0.0 0.4
+/scail/group/deeplearning/driving_data/640x480_Q50/3-14-14-101/101south_g 0.0 0.9375
+/scail/group/deeplearning/driving_data/640x480_Q50/3-18-14-tracy/from_Tracy_a 0 0.8
+/scail/group/deeplearning/driving_data/640x480_Q50/3-18-14-tracy/to_Tracy_a
+/scail/group/deeplearning/driving_data/640x480_Q50/3-19-14-tracy/to_tracy_c
+/scail/group/deeplearning/driving_data/640x480_Q50/3-19-14-tracy/to_tracy_e 0.0 0.875
+/scail/group/deeplearning/driving_data/640x480_Q50/3-19-14-tracy/to_tracy_g
+/scail/group/deeplearning/driving_data/640x480_Q50/4-2-14-monterey/1N_a 0.0 0.6
+/scail/group/deeplearning/driving_data/640x480_Q50/4-2-14-monterey/1N_c 0.25 1.0
+/scail/group/deeplearning/driving_data/640x480_Q50/4-2-14-monterey/17N_a 0.0 0.6
+/scail/group/deeplearning/driving_data/640x480_Q50/4-2-14-monterey/17N_b
+/scail/group/deeplearning/driving_data/640x480_Q50/4-2-14-monterey/17S_b
+/scail/group/deeplearning/driving_data/640x480_Q50/4-2-14-monterey/17S_c 
+/scail/group/deeplearning/driving_data/640x480_Q50/4-2-14-monterey/17S_d 
+/scail/group/deeplearning/driving_data/640x480_Q50/4-2-14-monterey/1S_e
+/scail/group/deeplearning/driving_data/640x480_Q50/4-2-14-monterey/1S_f 0.6 1.0
+/scail/group/deeplearning/driving_data/640x480_Q50/4-9-14-concord/4E_b
+/scail/group/deeplearning/driving_data/640x480_Q50/4-9-14-concord/680S_b 0 0.8
+/scail/group/deeplearning/driving_data/640x480_Q50/4-10-14-pleasanton/tomilpitas_a
+/scail/group/deeplearning/driving_data/640x480_Q50/4-11-14-sanrafael/sanrafael_g 0.33 1.0
+/scail/group/deeplearning/driving_data/640x480_Q50/4-29-14-granada/to_granada_e
+/scail/group/deeplearning/driving_data/640x480_Q50/6-17-14-280/280n_a
+/scail/group/deeplearning/driving_data/640x480_Q50/6-13-14-280/280N_stanford_b
+/scail/group/deeplearning/driving_data/640x480_Q50/7-18-14-101/101S_i 0 0.85
+/scail/group/deeplearning/driving_data/640x480_Q50/7-25-14-monterey/ToMonterey_i 0 0.73
+/scail/group/deeplearning/driving_data/640x480_Q50/8-6-14-101/ToSFO_c 0.09 1.0

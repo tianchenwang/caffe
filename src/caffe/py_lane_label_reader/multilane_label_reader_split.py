@@ -49,6 +49,7 @@ def colorful_line(img, start, end, start_color, end_color, thickness):
 
 class MultilaneLabelReader():
     def __init__(self, rank, predict_depth = True, batchSize = 48, imdepth=3, imwidth=640, imheight=480, markingWidth=0.07, distortion_file='/scail/group/deeplearning/driving_data/perspective_transforms.pickle', pixShift=0, label_dim = [80,60], new_distort=False, readVideo=False):
+      self.outname = '/scail/group/deeplearning/driving_data/twangcat/schedules/q50_multilane_planar_train_schedule_Vshape_strict2.txt'
       self.new_distort = new_distort
       if new_distort:
         self.Ps = setPersp()
@@ -95,7 +96,7 @@ class MultilaneLabelReader():
     def runBatch(self, vid_name, gps_filename1, gps_dat, gps_times1, gps_times2, frames, lanes, tr1,Pid, split_num, cam_num, params):
         if vid_name not in self.vid_names:
           #fid = open('/scail/group/deeplearning/driving_data/twangcat/schedules/q50_multilane_planar_train_schedule_Vshape_raw.txt','a')
-          fid = open('/scail/group/deeplearning/driving_data/twangcat/schedules/q50_multilane_planar_train_schedule_Vshape_strict.txt','a')
+          fid = open(self.outname,'a')
           self.vid_names.add(vid_name)
           fid.write('\n'+vid_name)
           fid.close()
@@ -109,7 +110,7 @@ class MultilaneLabelReader():
         starting_point2 = 15#12
         points_fwd2 = 15#6#12
         scan_range = starting_point + (points_fwd-1)*meters_per_point
-        seconds_ahead=5
+        seconds_ahead=2
         output_num = 0
         batchSize = frames.shape[0] 
         count = 0
@@ -144,12 +145,6 @@ class MultilaneLabelReader():
             # pick start and end point frame ids
             ids = np.where(np.logical_and(gps_times1>t-seconds_ahead*1000000, gps_times1<t+seconds_ahead*1000000))[0]
             ids = range(ids[0], ids[-1]+1)
-            temp_label = np.zeros([self.labelh, self.labelw], dtype='f4',order='C')
-            if self.predict_depth:
-              temp_reg1 = np.zeros([self.labelh, self.labelw, self.labeld/2],dtype='f4',order='C')
-              temp_reg2 = np.zeros([self.labelh, self.labelw, self.labeld/2],dtype='f4',order='C')
-            else:
-              temp_reg = np.zeros([self.labelh, self.labelw, self.labeld],dtype='f4',order='C')
             for l1 in np.where(self.laneVisible[gps_filename1][frame,:])[0]:
               for l2 in np.where(self.laneVisible[gps_filename1][frame,:])[0]:
                 if l2<l1:
@@ -157,9 +152,13 @@ class MultilaneLabelReader():
                   lane1 = lanes[lane_key1]
                   lane_key2 = 'lane'+str(l2)
                   lane2 = lanes[lane_key2]
-                  if np.sum((lane1[0,:]-tr1[fnum1,0:3,3])**2)<900 or np.sum((lane2[0,:]-tr1[fnum1,0:3,3])**2)<900:
+                  ahead1 = np.dot(tr1[fnum1,0:3,0:3], (lane1[0,:]-tr1[fnum1,0:3,3]))[0] # num of meters the starting of a lane is in front of car.
+                  side1 = np.dot(tr1[fnum1,0:3,0:3], (lane1[0,:]-tr1[fnum1,0:3,3]))[1] # num of meters the starting of a lane is laterall away from car.
+                  ahead2 = np.dot(tr1[fnum1,0:3,0:3], (lane2[0,:]-tr1[fnum1,0:3,3]))[0] # num of meters the starting of a lane is in front of car.
+                  side2 = np.dot(tr1[fnum1,0:3,0:3], (lane2[0,:]-tr1[fnum1,0:3,3]))[1] # num of meters the starting of a lane laterally away from car.
+                  if (ahead1<40 and ahead1>10 and side1<6 and side1>-6) or (ahead2<40 and ahead2>10 and side2<6 and side2>-6):
                     if np.min(np.sum((lane2 - lane1[0:1,:])**2,axis=1))<0.5 or np.min(np.sum((lane1 - lane2[0:1,:])**2,axis=1))<0.5:
-                      fid = open('/scail/group/deeplearning/driving_data/twangcat/schedules/q50_multilane_planar_train_schedule_Vshape_strict.txt','a')
+                      fid = open(self.outname,'a')
                       fid.write(' '+str(frame))
                       fid.close()
 

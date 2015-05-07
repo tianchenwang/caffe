@@ -6,19 +6,20 @@
 #include <opencv2/imgproc/imgproc.hpp>
 #include <cmath>
 namespace caffe {
-cv::Scalar dist2color(double dist, double max_dist = 90.0);
+  cv::Scalar dist2color(double dist, double max_dist = 90.0);
 
 
 // had to implement this in hpp file due to template.
-template <typename Dtype>
-void drawResults(cv::Mat& image, const Dtype* pix_label, const Dtype* reg_label, bool depth_only, bool predict_depth, double scaling, int quad_height, int quad_width, int grid_dim, bool islabel){
-      cv::cvtColor(image, image, CV_RGB2BGR);
+
+  template <typename Dtype>
+  void drawResults(cv::Mat& image, const Dtype* pix_label, const Dtype* reg_label, bool predict_depth, double scaling, int num_regression, int quad_height, int quad_width, int grid_dim){
       // draw ground truth and predictions on image.
       int grid_length = grid_dim*grid_dim;
       int label_height = quad_height*grid_dim;
       int label_width = quad_width*grid_dim;
       int img_width = image.cols;
       int img_height = image.rows;
+      cv::cvtColor(image, image, CV_BGR2RGB);
       double thresh=0.4;
       // retrieve labels and predictions 
       for (int z=0; z<grid_length;++z){
@@ -29,8 +30,7 @@ void drawResults(cv::Mat& image, const Dtype* pix_label, const Dtype* reg_label,
             int x = qx*grid_dim+dx;
             int y = qy*grid_dim+dy;
             double label_prob = (double)(*(pix_label+((z*quad_height+qy)*quad_width+qx)));
-            if(!islabel)
-              label_prob = 1. / (1. + exp(-label_prob));
+            label_prob = 1. / (1. + exp(-label_prob));
             //std::cout<<label_prob<<" ";
             // draw pixel label/pred
             double x1 = x-0.5<0? 0:x-0.5;
@@ -38,22 +38,10 @@ void drawResults(cv::Mat& image, const Dtype* pix_label, const Dtype* reg_label,
             double w = scaling - (x<0.5? 0.5-x:0) - (x1+scaling>img_width? x1+scaling-img_width:0);
             double h = scaling - (y<0.5? 0.5-y:0) - (y1+scaling>img_height? y1+scaling-img_height:0);
             cv::Mat roi = image(cv::Rect(x1*scaling, y1*scaling, w, h));
-            if (depth_only) // if predict depth only, draw mask directly with depth color
-            {
-              if (label_prob>thresh)
-              {
-                Dtype depth = *(reg_label+((z*quad_height+qy)*quad_width+qx));
-                cv::Mat color(roi.size(), CV_32FC3, dist2color(depth));
-                cv::addWeighted(color, label_prob, roi, 1.0 - label_prob , 0.0, roi); 
-              }
-            }
-            else // otherwise draw green mask
-            {
-              cv::Mat color(roi.size(), CV_32FC3, cv::Scalar(0, 255, 0)); 
-              cv::addWeighted(color, label_prob, roi, 1.0 - label_prob , 0.0, roi); 
-            }
-            // draw line prediction if necessary
-            if (!depth_only && label_prob > thresh) {
+            cv::Mat color(roi.size(), CV_32FC3, cv::Scalar(0, 255, 0)); 
+            cv::addWeighted(color, label_prob, roi, 1.0 - label_prob , 0.0, roi); 
+            if (label_prob > thresh) {
+
               // draw reg label/pred
               Dtype x_adj = (qx*grid_dim + grid_dim / 2) * scaling;
               Dtype y_adj = (qy*grid_dim + grid_dim / 2) * scaling;
@@ -75,7 +63,41 @@ void drawResults(cv::Mat& image, const Dtype* pix_label, const Dtype* reg_label,
           }
         }
       }
-}
+  }
+
+
+
+/*template <typename Dtype>
+  void drawResults(cv::Mat& image, const Dtype* pix_label, double scaling, int quad_height, int quad_width, int grid_dim){
+      // draw ground truth and predictions on image.
+      int grid_length = grid_dim*grid_dim;
+      int label_height = quad_height*grid_dim;
+      int label_width = quad_width*grid_dim;
+      int img_width = image.cols;
+      int img_height = image.rows;
+      double thresh=0.4;
+      // retrieve labels and predictions 
+      for (int qy = 0; qy < quad_height; ++qy) {
+        for (int qx = 0; qx < quad_width; ++qx) {
+          for (int z=0; z<grid_length;++z){
+            int dx = z%grid_dim;
+            int dy = z/grid_dim;
+            int x = qx*grid_dim+dx;
+            int y = qy*grid_dim+dy;
+            double label_prob = (double)(*(pix_label+((z*quad_height+qy)*quad_width+qx)));
+            label_prob = 1. / (1. + exp(-label_prob));
+            double x1 = x-0.5<0? 0:x-0.5;
+            double y1 = y-0.5<0? 0:y-0.5;
+            double w = scaling - (x<0.5? 0.5-x:0) - (x1+scaling>img_width? x1+scaling-img_width:0);
+            double h = scaling - (y<0.5? 0.5-y:0) - (y1+scaling>img_height? y1+scaling-img_height:0);
+            cv::Mat roi = image(cv::Rect(x1*scaling, y1*scaling, w, h));
+            //LOG(INFO)<<x1*scaling<<" "<<y1*scaling<<" "<<w<<" "<<h<<" "<<label_prob;
+            cv::Mat color(roi.size(), CV_32FC3, cv::Scalar(0, 255, 0)); 
+            cv::addWeighted(color, label_prob, roi, 1.0 - label_prob , 0.0, roi); 
+          }
+        }
+      }
+  }*/
 }  // namespace caffe
 
 #endif   // CAFFE_UTIL_PLOT_H_
